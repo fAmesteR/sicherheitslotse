@@ -1,0 +1,130 @@
+[
+  {
+    "doc": "ArbSchG",
+    "url": "https://www.gesetze-im-internet.de/arbschg/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/arbschg/",
+    "downloaded": "2026-11-01",
+    "version_date": "2025-12-22",
+    "sha256": "e77664995ad16591c28d6b6fba114cdc1597af792150055415c05c9ed24cfc66"
+  },
+  {
+    "doc": "ArbStättV",
+    "url": "https://www.gesetze-im-internet.de/arbst_ttv_2004/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/arbst_ttv_2004/",
+    "downloaded": "2026-11-01",
+    "version_date": "2024-03-27",
+    "sha256": "3315f45e73e58ce173fd98f02a83c5d1551e918ceea93aba55bb27969dcd358a"
+  },
+  {
+    "doc": "BetrSichV",
+    "url": "https://www.gesetze-im-internet.de/betrsichv_2015/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/betrsichv_2015/",
+    "downloaded": "2026-11-01",
+    "version_date": "2025-12-18",
+    "sha256": "f651ed1c8989746ee2bebbe6ab4317719dad958787a28ba809ea17b14aa80cfe"
+  },
+  {
+    "doc": "GefStoffV",
+    "url": "https://www.gesetze-im-internet.de/gefstoffv_2010/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/gefstoffv_2010/",
+    "downloaded": "2026-11-01",
+    "version_date": "2025-12-17",
+    "sha256": "3275f4f3cb6ac2942e6d61c682d7566f6701be8fc6d66737a72baf92c97dc99d"
+  },
+  {
+    "doc": "ASiG",
+    "url": "https://www.gesetze-im-internet.de/asig/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/asig/",
+    "downloaded": "2026-11-01",
+    "version_date": "2013-04-20",
+    "sha256": "69ff152993960f11553b61425fe71e820bd73c31cd8335ddc01bd7e3081597c4"
+  },
+  {
+    "doc": "ArbMedVV",
+    "url": "https://www.gesetze-im-internet.de/arbmedvv/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/arbmedvv/",
+    "downloaded": "2026-11-01",
+    "version_date": "2026-05-11",
+    "sha256": "567096015b1ebe29ce95d2bbd5efcd3f049385d7e890f5df645fc77d9db13a23"
+  },
+  {
+    "doc": "PSA-BV",
+    "url": "https://www.gesetze-im-internet.de/psa-bv/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/psa-bv/",
+    "downloaded": "2026-11-01",
+    "version_date": "2024-12-02",
+    "sha256": "6ff5d887799a5a0a1f6353d238213c8c29aabe2ac3972c4e69a58a36d340c3d2"
+  },
+  {
+    "doc": "LärmVibrationsArbSchV",
+    "url": "https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/l_rmvibrationsarbschv/",
+    "downloaded": "2026-11-01",
+    "version_date": "2021-07-21",
+    "sha256": "57748ddd2f6938f02c10e8e44bab2dbc6f3e7c2477cf2da155b12be807cf6dce"
+  },
+  {
+    "doc": "BioStoffV",
+    "url": "https://www.gesetze-im-internet.de/biostoffv_2013/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/biostoffv_2013/",
+    "downloaded": "2026-11-01",
+    "version_date": "2026-05-11",
+    "sha256": "29934a8993fc6ce900e9296e519282186251846c1d2bf388726ef0db9d46e8ae"
+  },
+  {
+    "doc": "LasthandhabV",
+    "url": "https://www.gesetze-im-internet.de/lasthandhabv/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/lasthandhabv/",
+    "downloaded": "2026-11-01",
+    "version_date": "2020-06-19",
+    "sha256": "879c002f0e0844566f3f8e5c1bb1c7ff9aed208f55d45472c0b53c17a3bd7c9a"
+  },
+  {
+    "doc": "ArbZG",
+    "url": "https://www.gesetze-im-internet.de/arbzg/xml.zip",
+    "landing_page": "https://www.gesetze-im-internet.de/arbzg/",
+    "downloaded": "2026-11-01",
+    "version_date": "2024-10-23",
+    "sha256": "4d0d3c9d6d501f48bffd5c9d47d2cf6ad05369ffce709576ffa2f373d00aac38"
+  },
+  {
+    "doc": "ASR A1.8",
+    "url": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/pdf/ASR-A1-8.pdf?__blob=publicationFile",
+    "landing_page": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/ASR-A1-8",
+    "downloaded": "2026-11-01",
+    "version_date": "GMBl 2024, S. 412",
+    "sha256": "5bf1cec10437c71393ddd7b8697b771c82007db26ba144289ce2a09f101d37fd"
+  },
+  {
+    "doc": "ASR A2.3",
+    "url": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/pdf/ASR-A2-3.pdf?__blob=publicationFile",
+    "landing_page": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/ASR-A2-3",
+    "downloaded": "2026-11-01",
+    "version_date": "GMBl 2024, S. 913",
+    "sha256": "57cf2683d4a43cdaa3e3ce3660cae318f3de5d89063d6c164babe430c13a9334"
+  },
+  {
+    "doc": "ASR A3.4",
+    "url": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/pdf/ASR-A3-4.pdf?__blob=publicationFile",
+    "landing_page": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/ASR-A3-4",
+    "downloaded": "2026-11-01",
+    "version_date": "Ausgabe: Mai 2023",
+    "sha256": "5db4bc24d78a9070bde1d9079e8cc9a4eb5f466fc1dce71b2d28758f9ead5b06"
+  },
+  {
+    "doc": "ASR A3.5",
+    "url": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/pdf/ASR-A3-5.pdf?__blob=publicationFile",
+    "landing_page": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/ASR-A3-5",
+    "downloaded": "2026-11-01",
+    "version_date": "GMBl 2022, S. 198",
+    "sha256": "c78823902ae0c5d7183585e668b49ff6faa0afa23af060c889832032d6b4fd6f"
+  },
+  {
+    "doc": "ASR A4.1",
+    "url": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/pdf/ASR-A4-1.pdf?__blob=publicationFile",
+    "landing_page": "https://www.baua.de/DE/Angebote/Regelwerk/ASR/ASR-A4-1",
+    "downloaded": "2026-11-01",
+    "version_date": "GMBl 2022, S. 212",
+    "sha256": "dabc680dbd1a986630a61961bc48ab6e17a0e92466e46899d83340029a1a884b"
+  }
+]

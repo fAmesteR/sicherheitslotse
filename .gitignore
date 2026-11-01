@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+notes/
+
+# Source documents and the index stay out of the public repo (spec section 2).
+data/*
+!data/manifest.json
+index/
