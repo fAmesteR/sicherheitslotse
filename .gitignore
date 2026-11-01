@@ -5,7 +5,7 @@ __pycache__/
 .ruff_cache/
 notes/
 
-# Source documents and the index stay out of the public repo (spec section 2).
+# Source documents and the index stay out of the public repo.
 data/*
 !data/manifest.json
 index/

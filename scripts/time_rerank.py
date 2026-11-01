@@ -1,6 +1,6 @@
 """Week 1 timing: how long does reranking real-length passages take on this machine?
 
---threads 2 is the spec's rough stand-in for CPU Basic. Each question is scored against
+--threads 2 is a rough stand-in for CPU Basic. Each question is scored against
 its known answer plus random chunks, the "typical" set, and against the longest chunks,
 the "long" set, where every pair costs the most. The answer's rank is a sanity check of
 the model's German, not a retrieval metric: random chunks are easy to beat.
