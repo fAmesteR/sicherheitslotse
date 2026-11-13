@@ -48,3 +48,14 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 SMALL_RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 RERANK_CANDIDATES = 20
 RERANK_MAX_LENGTH = 512
+
+# Documents whose text may be sent to the answer API. The ASR stay on this machine until BAuA
+# allows their use.
+API_DOCS = frozenset(LAWS)
+
+ANSWER_MODEL = "mistral-small-2603"  # a dated name, so the model can't change under the evaluation
+ANSWER_MAX_TOKENS = 600  # several verbatim quotes don't fit in less
+ANSWER_PASSAGES = 5
+# Refuse without an API call if the best rerank score is below this. Not tuned yet: that needs the
+# unanswerable dev questions.
+REFUSAL_THRESHOLD: float | None = None

@@ -4,8 +4,9 @@ Beantwortet Fragen zum deutschen Arbeitsschutz, mit exakten Quellenangaben und g
 
 Answers questions about German occupational-safety rules, with exact citations and measured quality.
 
-**Status: in development.** Search over 11 laws and 5 technical rules works. Answer generation,
-the citation check, the test set and the public demo come next, so there is no live demo yet.
+**Status: in development.** Search over 11 laws and 5 technical rules works, and the answer step
+with its citation check is built. Answer quality isn't measured yet: that needs the test set, which
+comes next along with the public demo.
 
 | Part | State |
 |---|---|
@@ -13,8 +14,8 @@ the citation check, the test set and the public demo come next, so there is no l
 | 5 of the 14 technical rules, parsed from PDF | done |
 | Hybrid search and reranking, 1,554 chunks | done |
 | Reranker timing on CPU and ZeroGPU | done |
-| Answers with a deterministic citation check | next |
-| Refusal when the sources don't cover a question | next |
+| Answers with a deterministic citation check | built, not measured yet |
+| Refusal when the sources don't cover a question | built, score threshold not tuned yet |
 | 100-question test set and a CI quality gate | next |
 | Public Gradio demo on Hugging Face ZeroGPU | next |
 
@@ -35,7 +36,10 @@ flowchart LR
     F --> H[Reciprocal Rank Fusion top 20]
     G --> H
     H --> I[Cross-encoder top 5]
-    I -.-> J[Cited answer, planned]
+    I --> J[Mistral Small, answer as JSON]
+    J --> K{Citation check}
+    K -- passes --> L[Answer with sources]
+    K -- fails twice --> M[No answer shown]
 ```
 
 - **Every chunk can be cited.** It keeps its document, its § or section number, its page, its source
@@ -46,6 +50,18 @@ flowchart LR
 - **A cross-encoder reads the top 20 again**, question and passage together, and keeps the best 5.
 - **The index stays in memory.** A few thousand chunks fit in NumPy, so there is no vector database.
   Docling runs once, offline, and the app doesn't depend on it.
+- **The model answers in a fixed schema:** the text with `[n]` markers, plus one verbatim quote per
+  source it uses.
+- **Code decides what is shown, not the model.** The check in
+  [`answer.py`](src/lotse/generation/answer.py) lets an answer through only if every sentence names
+  a source, every quote is word for word in its passage, and every number in a sentence appears in a
+  source that sentence names or in the question. A quote may differ in case, spacing and list labels
+  such as "a)", but not in a single word. "8 Stunden" matches "acht Stunden", and the 2 in "m²"
+  counts for nothing. A failed answer gets one retry that is told what was wrong. After a second
+  failure no answer is shown.
+
+The check catches an invented quote or number. It can't tell whether a real quote supports its
+sentence, so an LLM judge will measure that separately.
 
 ## Measurements
 
@@ -111,6 +127,16 @@ uv run python eval/run_retrieval.py
 `build_index.py` takes about 10 minutes on a laptop CPU. `run_retrieval.py --rerankers bge small`
 also scores the reranked setups, which takes about 15 minutes on a CPU.
 
+To ask a question, put a Mistral API key into `.env` as `MISTRAL_API_KEY=...`. That file is
+gitignored.
+
+```bash
+uv run --env-file .env python -m lotse.pipeline "Wie lange darf ich pro Tag arbeiten?"
+```
+
+Add `--show-prompt` to see the passages and the exact prompt without calling the API. On a CPU the
+reranker makes one question take about a minute.
+
 Use the full ASR texts: a "Textauszug" change sheet prints deleted wording as if it were current, and
 `ingest.py` refuses one, as it does a file whose version differs from `lotse.config`.
 
@@ -135,8 +161,10 @@ index stay local.
 | [BAuA](https://www.baua.de/DE/Angebote/Regelwerk/ASR) ASR | 5 technical rules so far | Private, non-commercial use without consent |
 | DGUV | Excluded | Its terms forbid processing its publications with AI |
 
-No ASR text is published here. I asked BAuA for written permission on 2026-11-01. If it declines or
-doesn't reply by 2026-12-06, the public demo will run on the 11 laws alone.
+No ASR text is published here, and none is sent to the answer API: `API_DOCS` in `lotse.config`
+limits the passages that can leave the machine to the laws. I asked BAuA for written permission on
+2026-11-01. If it declines or doesn't reply by 2026-12-06, the public demo will run on the 11 laws
+alone.
 
 ## Limitations
 
@@ -148,3 +176,4 @@ text published in the GMBl is binding, and BAuA's PDFs are marked as unofficial.
 - A section's page is the page it starts on.
 - Chunks don't overlap. Sections are split at their own paragraphs, and only 7 of the 510 ASR chunks
   come from a further cut.
+- The citation check reads "zwei" to "zwölf" as numbers, but not "ein" or "eine".
