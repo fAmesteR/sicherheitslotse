@@ -4,7 +4,8 @@ The check is deterministic. It catches an invented quote or number, but it can't
 quote supports its sentence. The faithfulness metric measures that.
 
 Known limit: "ein" and "eine" are not read as the number 1, and "Acht" in "außer Acht lassen" is
-read as 8.
+read as 8. In a list of references such as "§§ 3, 4 und 5" only the first number is seen as a
+reference, so 4 and 5 count as values a sentence may state.
 """
 
 import re
@@ -12,7 +13,7 @@ import unicodedata
 
 from pydantic import BaseModel, Field
 
-from lotse.chunking import passage
+from lotse.chunking import context_prefix, passage
 
 NO_ANSWER = "Dazu finde ich in den Quellen keine Antwort."
 UNVERIFIED = "Keine belegte Antwort möglich."
@@ -39,12 +40,13 @@ SAME = str.maketrans(
     }
 )
 MARKER = re.compile(r"\[(\d+(?:, ?\d+)*)\]")  # "[1]", and "[1, 2]" as some models write it
-NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
+# Not glued to a letter: Unicode normalisation turns "m²" into "m2", and neither that 2 nor
+# the 2 in a name like "M1.2" is a value.
+NUMBER = re.compile(r"(?<![^\W_])(?<!\d[.,])\d+(?:[.,]\d+)*")
 # Laws write small numbers as words, so "8 Stunden" and "acht Stunden" are the same value.
 WORDS = "zwei drei vier fünf sechs sieben acht neun zehn elf zwölf"
 WORDS = {word: str(value) for value, word in enumerate(WORDS.split(), start=2)}
 NUMBER_WORD = re.compile(rf"\b(?:{'|'.join(WORDS)})\b")
-UNIT_POWERS = str.maketrans("", "", "²³")  # the 2 in "m²" is no value
 # "jedes dritte Jahr" is "alle drei Jahre". Lower case only, because "Dritte" are third parties,
 # and without the eighth, because "achten" is a verb.
 ORDINALS = {"zweit": "2", "dritt": "3", "viert": "4", "fünft": "5", "sechst": "6", "siebt": "7"}
@@ -55,6 +57,11 @@ ORDINAL = re.compile(rf"\b({'|'.join(ORDINALS)})e[rnsm]?\b")
 LABEL = r"(?:\(\d{1,2}[a-z]?\)|\d{1,2}\.|[a-z]{1,2}\))"
 LINE_LABEL = re.compile(rf"(?m)^\s*{LABEL}(?=\s)")
 QUOTED_LABEL = re.compile(rf"(?<!\S){LABEL}(?=\s|$)")
+# Numbers that name a place in a text and state nothing: "§ 5", "Abs. 2", "Anhang 1 Nr. 3.7".
+REFERENCE = re.compile(
+    r"(?:§+|\b(?:Absatz|Absätze|Abs\.|Satz|Sätze|Nummer|Nummern|Nr\.|Buchstabe|Anhang|Abschnitt"
+    r"|Teil|Tabelle|Artikel|Art\.))\s*\d+(?:\.\d+)*[a-z]?\b"
+)
 
 TRAILING_MARKERS = re.compile(rf"([.!?])((?:\s*{MARKER.pattern})+)")
 MONTHS = "Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember"
@@ -73,10 +80,17 @@ def normalise(text: str) -> str:
 
 
 def numbers(text: str) -> set[str]:
-    text = normalise(MARKER.sub(" ", text.translate(UNIT_POWERS)))
+    text = normalise(MARKER.sub(" ", text))
     found = {ORDINALS[stem] for stem in ORDINAL.findall(text)}
     text = text.lower()
     return found | set(NUMBER.findall(text)) | {WORDS[word] for word in NUMBER_WORD.findall(text)}
+
+
+def values(text: str) -> set[str]:
+    """The numbers a text states. Left out are those that only name a place in it: the label
+    "(2)" at the start of a line, "§ 5", "Abs. 1". Otherwise "(2)" in a source would allow an
+    invented "zwei Ersthelfer"."""
+    return numbers(REFERENCE.sub(" ", LINE_LABEL.sub(" ", text)))
 
 
 def squeeze(text: str) -> str:
@@ -146,10 +160,16 @@ def check(answer: Answer, chunks: list[dict], question: str = "") -> str | None:
             return f"Der Satz „{sentence}“ hat keine Quellenangabe [n]."
         if markers - cited:
             return f"Zu [{min(markers - cited)}] fehlt ein Zitat."
-        # A sentence's numbers must come from the sources that sentence names, prefix included,
-        # or from the question, which the user wrote.
-        known = numbers(question).union(*(numbers(passage(chunks[n - 1])) for n in markers))
-        if unknown := numbers(sentence) - known:
+        # Every number in a sentence must stand in a source that sentence names, prefix
+        # included, or in the question, which the user wrote. A number the sentence states as
+        # a value must be a value there too, not only a paragraph label or a section number.
+        sources = [chunks[n - 1] for n in markers]
+        named = numbers(question).union(*(numbers(passage(chunk)) for chunk in sources))
+        stated = values(question).union(
+            *(values(chunk["text"]) for chunk in sources),
+            *(values(context_prefix(c["doc"], c["section"], c["heading"])) for c in sources),
+        )
+        if unknown := (numbers(sentence) - named) | (values(sentence) - stated):
             return (
                 f"Die Zahl {min(unknown)} im Satz „{sentence}“ steht nicht in den dort "
                 "genannten Quellen."

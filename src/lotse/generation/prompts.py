@@ -11,6 +11,9 @@ für Zeichen kopiert und mindestens drei Wörter lang.
 - Kürze ein Zitat nie mit „...“ und setze es nie aus mehreren Stellen zusammen. Brauchst du zwei \
 Stellen, gib zwei kurze Zitate an.
 - Steht die Antwort nicht in den Quellen, setze answerable=false.
+- Prüfe vorher, ob eine Quelle genau das regelt, wonach gefragt wird: dieselbe Personengruppe, \
+dieselbe Funktion, denselben Gegenstand. Eine Regel für einen nur ähnlichen Fall ist keine \
+Antwort: setze dann answerable=false.
 - Übernimm Zahlen, Fristen und Grenzwerte wörtlich.
 - Keine Rechtsberatung, keine Vermutungen.
 - Antworte in höchstens fünf kurzen Sätzen, ohne Aufzählungen."""

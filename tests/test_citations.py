@@ -166,6 +166,25 @@ def test_paragraph_and_rule_numbers_come_from_the_context_prefix():
     assert check(answer(text, RULE_QUOTE), CHUNKS) is None
 
 
+def test_a_paragraph_label_or_a_section_number_is_no_value():
+    # Invented wording. The evaluation found this hole: a source with the label (2) let an
+    # invented "zwei Ersthelfer" through.
+    chunk = {
+        "doc": "ArbSchG",
+        "section": "§ 10",
+        "heading": "Erste Hilfe",
+        "text": "(1) Der Arbeitgeber trifft die Maßnahmen zur Ersten Hilfe.\n"
+        "(2) Er hat Beschäftigte zu benennen, die helfen. Satz 1 gilt auch nach Absatz 3.",
+    }
+    quote = (1, "hat Beschäftigte zu benennen")
+    assert "Die Zahl 2" in rejected("Zu benennen sind zwei Ersthelfer [1].", quote, chunks=[chunk])
+    assert "Die Zahl 3" in rejected("Zu benennen sind drei Ersthelfer [1].", quote, chunks=[chunk])
+    assert "Die Zahl 10" in rejected("Zu benennen sind 10 Ersthelfer [1].", quote, chunks=[chunk])
+    assert check(answer("Nach Absatz 2 benennt er Beschäftigte [1].", quote), [chunk]) is None
+    assert check(answer("Das regelt § 10 Abs. 2 ArbSchG [1].", quote), [chunk]) is None
+    assert "Die Zahl 4" in rejected("Das regelt Absatz 4 [1].", quote, chunks=[chunk])
+
+
 def test_part_of_a_number_is_not_that_number():
     assert "Die Zahl 25" in rejected("Frei zu halten sind 25 m² [2].", RULE_QUOTE)
     assert "Die Zahl 5" in rejected("Die Höhe beträgt 5 m [2].", RULE_QUOTE)
