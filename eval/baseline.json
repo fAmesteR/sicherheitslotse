@@ -11,5 +11,20 @@
   "chunks": 1044,
   "origins": [
     "llm-draft"
-  ]
+  ],
+  "answers": {
+    "metrics": {
+      "citation_validity": 0.769,
+      "faithfulness": 0.872
+    },
+    "date": "2026-11-14",
+    "commit": "67d2ebb",
+    "split": "dev",
+    "runs": 1,
+    "questions": 80,
+    "origins": [
+      "llm-draft"
+    ],
+    "answer_model": "mistral-small-2603"
+  }
 }

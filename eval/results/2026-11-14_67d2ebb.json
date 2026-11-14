@@ -1,0 +1,262 @@
+{
+  "date": "2026-11-14",
+  "commit": "67d2ebb",
+  "split": "dev",
+  "chunks": 1044,
+  "origins": [
+    "llm-draft"
+  ],
+  "setups": {
+    "bm25_only": {
+      "recall_at_5": 0.417,
+      "recall_interval_95": [
+        0.301,
+        0.543
+      ],
+      "mrr_at_10": 0.345,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "3/12",
+        "fact": "12/20",
+        "duties": "7/16",
+        "two_sources": "3/12"
+      }
+    },
+    "dense_only": {
+      "recall_at_5": 0.733,
+      "recall_interval_95": [
+        0.61,
+        0.829
+      ],
+      "mrr_at_10": 0.709,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "11/12",
+        "fact": "19/20",
+        "duties": "10/16",
+        "two_sources": "4/12"
+      }
+    },
+    "hybrid_rrf": {
+      "recall_at_5": 0.667,
+      "recall_interval_95": [
+        0.541,
+        0.773
+      ],
+      "mrr_at_10": 0.542,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "9/12",
+        "fact": "17/20",
+        "duties": "10/16",
+        "two_sources": "4/12"
+      }
+    },
+    "hybrid_rerank_bge": {
+      "recall_at_5": 0.8,
+      "recall_interval_95": [
+        0.682,
+        0.882
+      ],
+      "mrr_at_10": 0.732,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "9/12",
+        "fact": "19/20",
+        "duties": "13/16",
+        "two_sources": "7/12"
+      }
+    },
+    "hybrid_rerank_small": {
+      "recall_at_5": 0.783,
+      "recall_interval_95": [
+        0.664,
+        0.869
+      ],
+      "mrr_at_10": 0.66,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "9/12",
+        "fact": "19/20",
+        "duties": "13/16",
+        "two_sources": "6/12"
+      }
+    }
+  },
+  "missed": {
+    "d001": [
+      "bm25_only"
+    ],
+    "d002": [
+      "hybrid_rerank_small"
+    ],
+    "d003": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d005": [
+      "bm25_only"
+    ],
+    "d008": [
+      "bm25_only"
+    ],
+    "d014": [
+      "bm25_only"
+    ],
+    "d015": [
+      "bm25_only"
+    ],
+    "d016": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d017": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d019": [
+      "bm25_only"
+    ],
+    "d020": [
+      "bm25_only"
+    ],
+    "d021": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d022": [
+      "bm25_only"
+    ],
+    "d024": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d029": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d030": [
+      "bm25_only"
+    ],
+    "d031": [
+      "bm25_only",
+      "hybrid_rerank_bge"
+    ],
+    "d034": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d035": [
+      "bm25_only"
+    ],
+    "d037": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d040": [
+      "bm25_only"
+    ],
+    "d042": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d043": [
+      "bm25_only"
+    ],
+    "d048": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d052": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d056": [
+      "hybrid_rerank_small"
+    ],
+    "d057": [
+      "bm25_only"
+    ],
+    "d058": [
+      "bm25_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d059": [
+      "hybrid_rerank_small"
+    ],
+    "d062": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d063": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d064": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d065": [
+      "bm25_only",
+      "dense_only"
+    ],
+    "d066": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d068": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d069": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d070": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_small"
+    ],
+    "d071": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge",
+      "hybrid_rerank_small"
+    ],
+    "d072": [
+      "dense_only",
+      "hybrid_rrf"
+    ]
+  }
+}

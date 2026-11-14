@@ -6,9 +6,10 @@ Beantwortet Fragen zum deutschen Arbeitsschutz, mit exakten Quellenangaben und g
 
 Answers questions about German occupational-safety rules, with exact citations and measured quality.
 
-**Status: in development.** Search over 11 laws and 5 technical rules works, and the answer step
-with its citation check is built. A Gradio demo runs locally on the 11 laws. Answer quality isn't
-measured yet: that needs the test set, which comes next along with the public demo.
+**Status: in development.** Search, cited answers, the evaluation, a quality gate in CI, a web
+service with an API and a Docker image are built. The numbers below are a first reading: the 100
+questions were drafted by an LLM and not yet reviewed by hand, and the 20 test questions have not
+been run. The demo is not public yet.
 
 | Part | State |
 |---|---|
@@ -16,13 +17,16 @@ measured yet: that needs the test set, which comes next along with the public de
 | 5 of the 14 technical rules, parsed from PDF | done |
 | Hybrid search and reranking, 1,554 chunks | done |
 | Reranker timing on CPU and ZeroGPU | done |
-| Answers with a deterministic citation check | built, not measured yet |
+| Answers with a deterministic citation check | done |
 | Refusal when the sources don't cover a question | built, score threshold not tuned yet |
-| Answer evaluation with an LLM judge | built, waiting for reviewed questions |
-| CI: lint and unit tests on every push | done |
-| Gradio demo on the 11 laws, run locally | done |
-| 100-question test set and the retrieval quality gate in CI | next |
-| Public Gradio demo on Hugging Face ZeroGPU | prepared, not deployed yet |
+| 100 questions: 75 answerable, 25 not | drafted by an LLM, hand review still open |
+| Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
+| CI: lint, unit tests, Docker build | done |
+| Quality gate in CI on Recall@5 and MRR@10 | built, switched on once the index is uploaded |
+| Gradio demo and JSON API (FastAPI) on the 11 laws | done, run locally |
+| Latency and cost logged for every query | done |
+| Docker image | builds in CI |
+| Public deployment | prepared, not deployed yet |
 
 ## How it works
 
@@ -66,9 +70,43 @@ flowchart LR
   failure no answer is shown.
 
 The check catches an invented quote or number. It can't tell whether a real quote supports its
-sentence, so an LLM judge will measure that separately.
+sentence, so an LLM judge measures that separately as faithfulness.
 
 ## Measurements
+
+### Quality on the dev questions
+
+80 of the 100 questions form the dev split: 60 that the 11 laws answer and 20 that they don't.
+An LLM drafted all of them, and a script checked every source label and key fact against the law
+text. They are not reviewed by hand yet, so read these numbers as a first reading. Search ran on
+the laws-only index of 1,044 chunks, the one the public demo will use.
+
+| Search setup | Recall@5 | MRR@10 |
+|---|---|---|
+| BM25 only | 0.42 | 0.35 |
+| Dense only (bge-m3) | 0.73 | 0.71 |
+| Hybrid (RRF) | 0.67 | 0.54 |
+| Hybrid + `bge-reranker-v2-m3` (the demo's setup) | 0.80 | 0.73 |
+| Hybrid + `mmarco-mMiniLMv2-L12-H384-v1` | 0.78 | 0.66 |
+
+n = 60. The 95% interval for 0.80 is 0.68 to 0.88.
+
+| Answers, one run | Value | Out of |
+|---|---|---|
+| Answer rate | 0.82 | 60 answerable questions |
+| Citation validity: first replies that pass the check | 0.77 | 65 replies |
+| Correctness: judged correct against the reference, "partly" counts as not correct | 0.78 | 49 shown answers |
+| Faithfulness: sentences the judge finds supported by their source | 0.87 | 86 sentences |
+| Refusal, off-topic questions | 10 of 10 | |
+| Refusal, near-domain questions | 3 of 10 | |
+| API time per answer, p50 and p95 | 1.5 s and 3.5 s | |
+| API cost per answer | $0.00039 | |
+
+Mistral Small writes the answers and Mistral Large judges them. Every run is in
+[`eval/results`](eval/results), and [`eval/baseline.json`](eval/baseline.json) holds what CI
+compares against.
+
+### Reranker speed
 
 Median time to rerank 20 passages, over 8 questions:
 
@@ -83,11 +121,24 @@ The better model only works on a GPU, so the small one stays as the fallback. Th
 at a quiet hour with one caller, so the live demo's median will be the real test. Every run is in
 [`eval/results/rerank_timing.jsonl`](eval/results/rerank_timing.jsonl).
 
-Search quality isn't quoted yet. `eval/run_retrieval.py` reports Recall@5 and MRR@10 with 95%
-intervals, but the runs so far use 28 draft questions that nobody has reviewed. The numbers will go
-here once the reviewed test set has run.
-
 ## What didn't work
+
+**Near-domain questions get answered from a neighbouring rule.** Asked how long a 16-year-old
+trainee may work, the system answered "8 hours" from the Arbeitszeitgesetz, which doesn't apply
+to minors. 7 of 10 such questions got an answer. The citation check can't catch this, because
+the quote is real. A rerank-score threshold doesn't separate them either: a cut at 0 refuses 19
+of the 20 unanswerable questions but also drops 19 of the 49 good answers. This is the main
+open problem.
+
+**The number check let one invented number through.** "Mindestens zwei Ersthelfer" passed,
+because the passage contains the paragraph label "(2)". Labels should not count as values.
+
+**Fusing the two searches is worse than dense search alone here**, 0.67 against 0.73 in
+Recall@5, because BM25 alone reaches only 0.42 on everyday wording. The reranker more than makes
+up for it (0.80).
+
+**Questions that need two sections are the weak type.** Both sections are in the top 5 for 7 of
+12, and the judge rates only 3 of 12 answers fully correct.
 
 **A clean-looking metric picked the wrong parser model.** I converted the PDFs with three Docling
 layout models and first preferred `egret_xlarge`, which left no bare values outside a table. My check
@@ -129,6 +180,10 @@ uv run python scripts/build_index.py
 uv run python eval/run_retrieval.py
 ```
 
+`run_retrieval.py --gate` is the quality gate: it exits with an error if Recall@5 or MRR@10 of
+hybrid search falls more than 0.02 below `eval/baseline.json`. CI runs it on every push once the
+index token is set. `--save-baseline` stores a new baseline, which is its own commit.
+
 `build_index.py` takes about 10 minutes on a laptop CPU. `run_retrieval.py --rerankers bge small`
 also scores the reranked setups, which takes about 15 minutes on a CPU.
 
@@ -151,6 +206,34 @@ uv run --env-file .env python app/app.py
 It shows the answer and, for each source, the passage with the quoted words marked and a link to
 the original. It searches the 11 laws only. A visitor gets 10 questions per 10 minutes and 300
 characters per question, and a repeated question is answered from memory without an API call.
+
+The same page with a JSON API next to it, as the Docker image runs it:
+
+```bash
+uv run --env-file .env uvicorn server:api --app-dir app --port 7860
+```
+
+| Route | What it does |
+|---|---|
+| `POST /ask` with `{"question": "..."}` | The checked answer and its sources as JSON. 429 over the limit, 422 for a bad question, 503 if the model can't be reached |
+| `GET /health` | Answers once the index, the key and both models are loaded |
+| `GET /metrics` | Queries by outcome, p50 and p95 latency, USD in total and per 1,000 queries |
+| `GET /docs` | The API description that FastAPI generates |
+
+Every query writes one JSON line to the server's output: time, outcome, seconds, prompt and
+completion tokens, and cost at list price. The question and the visitor's address are not in it.
+
+As a container:
+
+```bash
+docker build -t sicherheitslotse .
+docker run -p 7860:7860 -e MISTRAL_API_KEY -e HF_TOKEN -v lotse-models:/data sicherheitslotse
+```
+
+The image holds a CPU build of PyTorch and no models. At its first start the container downloads
+both models into the `/data` volume and the index from the private dataset. On a CPU the reranker
+needs most of a minute per question: in a test run of the container one question took 59 s and
+another 23 s, and a repeated one came from the cache at once.
 
 To publish the demo to a Hugging Face Space, after `hf auth login`:
 
