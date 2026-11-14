@@ -16,6 +16,7 @@ comes next along with the public demo.
 | Reranker timing on CPU and ZeroGPU | done |
 | Answers with a deterministic citation check | built, not measured yet |
 | Refusal when the sources don't cover a question | built, score threshold not tuned yet |
+| Answer evaluation with an LLM judge | built, waiting for reviewed questions |
 | 100-question test set and a CI quality gate | next |
 | Public Gradio demo on Hugging Face ZeroGPU | next |
 
@@ -136,6 +137,17 @@ uv run --env-file .env python -m lotse.pipeline "Wie lange darf ich pro Tag arbe
 
 Add `--show-prompt` to see the passages and the exact prompt without calling the API. On a CPU the
 reranker makes one question take about a minute.
+
+To measure the answers on the dev split:
+
+```bash
+uv run --env-file .env python eval/run_answers.py --runs 3
+```
+
+It reports the answer rate, citation validity and refusal rate from the pipeline, and lets a second
+model judge correctness and faithfulness with the prompts in
+[`eval/judge_prompt.md`](eval/judge_prompt.md). The answer model is not repeatable even at
+temperature 0, so every setup is run three times.
 
 Use the full ASR texts: a "Textauszug" change sheet prints deleted wording as if it were current, and
 `ingest.py` refuses one, as it does a file whose version differs from `lotse.config`.

@@ -59,3 +59,9 @@ ANSWER_PASSAGES = 5
 # Refuse without an API call if the best rerank score is below this. Not tuned yet: that needs the
 # unanswerable dev questions.
 REFUSAL_THRESHOLD: float | None = None
+
+# The judge is a different model from the one that answers. It has no dated name, so the result
+# file records which one ran.
+JUDGE_MODEL = "mistral-large-4-0"
+JUDGE_EFFORT = "medium"  # how much it reasons before the verdict: low, medium or high
+JUDGE_MAX_TOKENS = 3000  # its reasoning counts as output

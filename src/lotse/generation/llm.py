@@ -1,13 +1,24 @@
 """The only file that knows the API provider."""
 
 import os
+from collections import Counter
 from functools import cache
 
 from mistralai.client import Mistral
 from mistralai.extra import response_format_from_pydantic_model
+from pydantic import BaseModel
 
-from lotse.config import ANSWER_MAX_TOKENS, ANSWER_MODEL
+from lotse.config import (
+    ANSWER_MAX_TOKENS,
+    ANSWER_MODEL,
+    JUDGE_EFFORT,
+    JUDGE_MAX_TOKENS,
+    JUDGE_MODEL,
+)
 from lotse.generation.answer import Answer
+
+# Tokens used per model since the program started, for the cost per answer.
+USAGE: dict[str, Counter] = {}
 
 
 @cache
@@ -20,18 +31,36 @@ def client() -> Mistral:
     return Mistral(api_key=key)
 
 
-def complete(messages: list[dict]) -> Answer | None:
-    """The model's reply in the schema. None if it was cut off or doesn't fit the schema."""
+def ask[Reply: BaseModel](
+    model: str, messages: list[dict], schema: type[Reply], max_tokens: int, effort: str
+) -> Reply | None:
+    """One reply in the schema. None if it was cut off or doesn't fit the schema."""
     response = client().chat.complete(
-        model=ANSWER_MODEL,
+        model=model,
         messages=messages,
-        response_format=response_format_from_pydantic_model(Answer),  # schema mode, strict
+        response_format=response_format_from_pydantic_model(schema),  # schema mode, strict
         temperature=0,  # still not repeatable: the same request gave different replies
-        max_tokens=ANSWER_MAX_TOKENS,
-        reasoning_effort="none",
+        top_p=1,  # the large model demands this with temperature 0
+        max_tokens=max_tokens,
+        reasoning_effort=effort,
+    )
+    used = response.usage
+    USAGE.setdefault(model, Counter()).update(
+        prompt=used.prompt_tokens or 0, completion=used.completion_tokens or 0
     )
     content = response.choices[0].message.content
+    if not isinstance(content, str):  # a reasoning model replies in chunks, its thoughts first
+        content = "".join(getattr(chunk, "text", "") for chunk in content or [])
     try:
-        return Answer.model_validate_json(content) if isinstance(content, str) else None
+        return schema.model_validate_json(content)
     except ValueError:  # a reply cut off at max_tokens is not valid JSON
         return None
+
+
+def complete(messages: list[dict]) -> Answer | None:
+    return ask(ANSWER_MODEL, messages, Answer, ANSWER_MAX_TOKENS, "none")
+
+
+def judge[Reply: BaseModel](messages: list[dict], schema: type[Reply]) -> Reply | None:
+    """The same kind of call to a second model, which grades what the first one wrote."""
+    return ask(JUDGE_MODEL, messages, schema, JUDGE_MAX_TOKENS, JUDGE_EFFORT)

@@ -1,6 +1,6 @@
 import pytest
 
-from lotse.metrics import has_all_gold, in_section, reciprocal_rank, wilson_interval
+from lotse.metrics import has_all_gold, in_section, over_runs, reciprocal_rank, wilson_interval
 
 
 def chunk(doc: str, section: str) -> dict:
@@ -46,3 +46,15 @@ def test_wilson_interval_matches_a_worked_example():
 def test_wilson_interval_stays_inside_zero_and_one():
     assert wilson_interval(0, 10)[0] == pytest.approx(0)
     assert wilson_interval(10, 10)[1] == pytest.approx(1)
+
+
+def test_a_share_over_several_runs_keeps_each_run_and_the_mean():
+    result = over_runs([20, 22, 21], [28, 28, 28])
+    assert result["share"] == 0.75 and result["n"] == 28
+    assert result["per_run"] == [0.714, 0.786, 0.75]
+    low, high = result["interval_95"]
+    assert low < 0.75 < high
+
+
+def test_a_share_with_nothing_to_count_is_empty():
+    assert over_runs([0, 0], [0, 0]) == {"share": None, "n": 0}

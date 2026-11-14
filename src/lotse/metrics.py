@@ -1,6 +1,7 @@
 """Retrieval metrics. `gold` lists what an answer needs; each inner list can supply one part."""
 
 from math import sqrt
+from statistics import fmean
 
 Gold = list[list[str]]
 
@@ -33,3 +34,19 @@ def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, flo
     spread = z * sqrt(share * (1 - share) / n + z * z / (4 * n * n))
     denominator = 1 + z * z / n
     return (centre - spread) / denominator, (centre + spread) / denominator
+
+
+def over_runs(hits: list[int], totals: list[int]) -> dict:
+    """A share measured in several runs of the same questions. The interval is for an average
+    run and covers the choice of questions. per_run shows the model's own run-to-run noise."""
+    shares = [hit / total for hit, total in zip(hits, totals) if total]
+    if not shares:
+        return {"share": None, "n": 0}
+    n = round(fmean(totals))
+    low, high = wilson_interval(round(fmean(hits)), n)
+    return {
+        "share": round(fmean(shares), 3),
+        "per_run": [round(share, 3) for share in shares],
+        "n": n,
+        "interval_95": [round(low, 3), round(high, 3)],
+    }
