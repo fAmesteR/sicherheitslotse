@@ -1,5 +1,7 @@
 # Sicherheitslotse
 
+[![CI](https://github.com/fAmesteR/sicherheitslotse/actions/workflows/ci.yml/badge.svg)](https://github.com/fAmesteR/sicherheitslotse/actions/workflows/ci.yml)
+
 Beantwortet Fragen zum deutschen Arbeitsschutz, mit exakten Quellenangaben und gemessener Qualität.
 
 Answers questions about German occupational-safety rules, with exact citations and measured quality.
@@ -17,7 +19,8 @@ comes next along with the public demo.
 | Answers with a deterministic citation check | built, not measured yet |
 | Refusal when the sources don't cover a question | built, score threshold not tuned yet |
 | Answer evaluation with an LLM judge | built, waiting for reviewed questions |
-| 100-question test set and a CI quality gate | next |
+| CI: lint and unit tests on every push | done |
+| 100-question test set and the retrieval quality gate in CI | next |
 | Public Gradio demo on Hugging Face ZeroGPU | next |
 
 ## How it works
