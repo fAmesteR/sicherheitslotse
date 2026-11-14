@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -6,7 +7,8 @@ PDF_DIR = RAW_DIR / "pdf"
 PARSED_DIR = ROOT / "data" / "parsed"
 MANIFEST = ROOT / "data" / "manifest.json"
 CHUNKS = ROOT / "data" / "chunks.jsonl"
-INDEX_DIR = ROOT / "index"
+# LOTSE_INDEX_DIR picks another index, for example index_public for numbers that match the demo.
+INDEX_DIR = Path(os.environ.get("LOTSE_INDEX_DIR") or ROOT / "index")
 PUBLIC_INDEX_DIR = ROOT / "index_public"  # the part of the index that may leave this machine
 
 GII_URL = "https://www.gesetze-im-internet.de"
@@ -72,3 +74,6 @@ REFUSAL_THRESHOLD: float | None = None
 JUDGE_MODEL = "mistral-large-4-0"
 JUDGE_EFFORT = "medium"  # how much it reasons before the verdict: low, medium or high
 JUDGE_MAX_TOKENS = 3000  # its reasoning counts as output
+
+# USD per million tokens, input and output: list prices read on 2026-11-13.
+PRICES = {ANSWER_MODEL: (0.15, 0.60), JUDGE_MODEL: (0.70, 2.10)}

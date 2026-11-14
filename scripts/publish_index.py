@@ -32,6 +32,7 @@ def main() -> None:
             repo_id=INDEX_REPO,
             repo_type="dataset",
             commit_message=f"Index of {len(saved.chunks)} chunks from {len(docs)} documents",
+            allow_patterns=["chunks.jsonl", "embeddings.npy", "meta.json", "bm25/*"],
             delete_patterns="*",
         )
         print(f'Uploaded. Now set INDEX_REVISION = "{commit.oid}" in src/lotse/config.py')

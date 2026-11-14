@@ -1,6 +1,13 @@
 import pytest
 
-from lotse.metrics import has_all_gold, in_section, over_runs, reciprocal_rank, wilson_interval
+from lotse.metrics import (
+    has_all_gold,
+    in_section,
+    over_runs,
+    reciprocal_rank,
+    regressions,
+    wilson_interval,
+)
 
 
 def chunk(doc: str, section: str) -> dict:
@@ -58,3 +65,11 @@ def test_a_share_over_several_runs_keeps_each_run_and_the_mean():
 
 def test_a_share_with_nothing_to_count_is_empty():
     assert over_runs([0, 0], [0, 0]) == {"share": None, "n": 0}
+
+
+def test_the_gate_allows_noise_but_not_a_real_drop():
+    baseline = {"metrics": {"recall_at_5": 0.80, "mrr_at_10": 0.70}}
+    assert regressions({"recall_at_5": 0.785, "mrr_at_10": 0.90}, baseline) == []
+    assert regressions({"recall_at_5": 0.80, "mrr_at_10": 0.67}, baseline) == [
+        "mrr_at_10: 0.670 is more than 0.02 below the baseline 0.700"
+    ]

@@ -13,13 +13,15 @@ from pathlib import Path
 
 from lotse.chunking import passage
 from lotse.config import RERANKER_MODEL, ROOT, SEARCH_CANDIDATES, SMALL_RERANKER_MODEL
-from lotse.metrics import has_all_gold, reciprocal_rank, wilson_interval
+from lotse.metrics import has_all_gold, reciprocal_rank, regressions, wilson_interval
 from lotse.retrieval import bm25, dense, hybrid
 from lotse.retrieval.index import Index, load_index
 from lotse.retrieval.rerank import score
 
 QUESTIONS = Path(__file__).with_name("questions.jsonl")
 RESULTS = ROOT / "eval" / "results"
+BASELINE = Path(__file__).with_name("baseline.json")
+GATED = "hybrid_rrf"  # no reranker, so CI can run it on a CPU in about a minute
 RERANKERS = {"bge": RERANKER_MODEL, "small": SMALL_RERANKER_MODEL}
 
 Ranker = Callable[[Index, dict], list[int]]
@@ -60,6 +62,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", default="dev", choices=["dev", "test"])
     parser.add_argument("--rerankers", nargs="*", default=[], choices=sorted(RERANKERS))
+    parser.add_argument("--gate", action="store_true", help="fail if below eval/baseline.json")
+    parser.add_argument("--save-baseline", action="store_true", help="store this run as it")
     args = parser.parse_args()
 
     questions = [json.loads(line) for line in QUESTIONS.open(encoding="utf-8")]
@@ -102,6 +106,20 @@ def main() -> None:
     path = RESULTS / f"{result['date']}_{result['commit']}.json"
     path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Saved {path.relative_to(ROOT)}")
+
+    measured = {name: setups[GATED][name] for name in ("recall_at_5", "mrr_at_10")}
+    if args.save_baseline:
+        kept = ("date", "commit", "split", "chunks", "origins")
+        baseline = {"setup": GATED, "metrics": measured, "n": len(questions)}
+        baseline |= {name: result[name] for name in kept}
+        BASELINE.write_text(json.dumps(baseline, ensure_ascii=False, indent=2), encoding="utf-8")
+    if args.gate:
+        baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+        if (baseline["chunks"], baseline["n"]) != (len(index.chunks), len(questions)):
+            raise SystemExit("The index or the questions changed: measure a new baseline")
+        if failed := regressions(measured, baseline):
+            raise SystemExit("Quality gate failed\n" + "\n".join(failed))
+        print(f"Quality gate passed: {measured} against {baseline['metrics']}")
 
 
 if __name__ == "__main__":

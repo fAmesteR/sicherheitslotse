@@ -32,8 +32,6 @@ HERE = Path(__file__).parent
 RESULTS = config.ROOT / "eval" / "results"
 DETAILS = config.ROOT / "data" / "eval_answers.jsonl"  # full texts, to check the judge by hand
 CACHE = config.INDEX_DIR / "reranked.json"
-# USD per million tokens, input and output: list prices read on 2026-11-13.
-PRICES = {"mistral-small-2603": (0.15, 0.60), "mistral-large-4-0": (0.70, 2.10)}
 
 JUDGE_TEXT = (HERE / "judge_prompt.md").read_text(encoding="utf-8")
 _sections = re.split(r"^## (\w+)\n", JUDGE_TEXT, flags=re.MULTILINE)  # intro, name, body, name, ...
@@ -149,7 +147,7 @@ def metrics(rows: list[dict], runs: int) -> dict:
 
 def cost(model: str) -> float:
     used = llm.USAGE.get(model, {})
-    price_in, price_out = PRICES[model]
+    price_in, price_out = config.PRICES[model]
     return (used.get("prompt", 0) * price_in + used.get("completion", 0) * price_out) / 1e6
 
 
@@ -159,8 +157,8 @@ def main() -> None:
     parser.add_argument("--runs", type=int, default=1)
     args = parser.parse_args()
     for model in (config.ANSWER_MODEL, config.JUDGE_MODEL):
-        if model not in PRICES:
-            raise SystemExit(f"Add the list price of {model} to PRICES")
+        if model not in config.PRICES:
+            raise SystemExit(f"Add the list price of {model} to PRICES in config.py")
 
     lines = (HERE / "questions.jsonl").read_text(encoding="utf-8").splitlines()
     questions = [q for q in map(json.loads, lines) if q["split"] == args.split]

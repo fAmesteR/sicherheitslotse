@@ -50,3 +50,13 @@ def over_runs(hits: list[int], totals: list[int]) -> dict:
         "n": n,
         "interval_95": [round(low, 3), round(high, 3)],
     }
+
+
+def regressions(current: dict, baseline: dict, tolerance: float = 0.02) -> list[str]:
+    """What fell more than `tolerance` below the stored baseline, one line per metric. Small
+    changes move the numbers a little by chance, so a gate without tolerance would cry wolf."""
+    return [
+        f"{name}: {current[name]:.3f} is more than {tolerance} below the baseline {expected:.3f}"
+        for name, expected in baseline["metrics"].items()
+        if current[name] < expected - tolerance
+    ]
