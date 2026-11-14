@@ -6,20 +6,24 @@ Nothing here knows Gradio, so the tests run without a browser.
 import html
 import json
 import logging
+import threading
 import time
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from collections.abc import Callable
-from datetime import date
+from datetime import UTC, date, datetime
 
 from lotse import pipeline
 from lotse.config import API_DOCS, MANIFEST
+from lotse.generation import llm
 from lotse.generation.answer import locate
+from lotse.metrics import percentile
 from lotse.pipeline import Result
 
 MAX_QUESTION_CHARS = 300
 QUESTIONS_PER_WINDOW = 10
 WINDOW_SECONDS = 600
 CACHED_ANSWERS = 1000
+KEPT_QUERIES = 10_000  # for /metrics; the log lines themselves go to the server's output
 REPO_URL = "https://github.com/fAmesteR/sicherheitslotse"
 
 TOO_LONG = f"Die Frage ist zu lang. Erlaubt sind höchstens {MAX_QUESTION_CHARS} Zeichen."
@@ -38,6 +42,7 @@ HINTS = {
 MARK = '<mark style="background:#ffe58a;color:#111">'
 
 log = logging.getLogger(__name__)
+query_log = logging.getLogger("lotse.queries")
 
 
 class RateLimit:
@@ -108,32 +113,96 @@ def render(result: Result) -> str:
 class Demo:
     """Answers one visitor's question, within the limits a public demo with a paid API needs."""
 
-    def __init__(self, ask: Callable[[str], Result] = pipeline.ask, limit: RateLimit | None = None):
-        self.ask = ask
+    def __init__(
+        self,
+        ask: Callable[[str], Result] = pipeline.ask,
+        limit: RateLimit | None = None,
+        totals: Callable[[], tuple[int, int, float]] = llm.totals,
+        clock: Callable[[], float] = time.perf_counter,
+    ):
+        self.ask, self.totals, self.clock = ask, totals, clock
         self.limit = limit or RateLimit()
         self.answers: dict[str, Result] = {}
+        self.queries: deque[dict] = deque(maxlen=KEPT_QUERIES)
+        # One question at a time: the models share one device, and a query's cost is the
+        # difference between the token totals before and after it.
+        self.lock = threading.Lock()
 
-    def respond(self, question: str, visitor: str) -> str:
+    def answer(self, question: str, visitor: str) -> Result | str:
+        """The checked result, or a notice if the question never reached the pipeline."""
         question = " ".join(question.split())
         if not question:
             return ""
         if len(question) > MAX_QUESTION_CHARS:
-            return f"<p>{TOO_LONG}</p>"
+            return TOO_LONG
         key = question.casefold()
         if key in self.answers:  # costs nothing, so it doesn't count against the limit
-            return render(self.answers[key])
+            self.record(self.answers[key].status, cached=True)
+            return self.answers[key]
         if not self.limit.allow(visitor):
-            return f"<p>{TOO_MANY}</p>"
-        try:
-            result = self.ask(question)
-        except Exception:
-            log.exception("A question failed")  # the question itself is not logged
-            return f"<p>{FAILED}</p>"
+            self.record("rate_limited")
+            return TOO_MANY
+        with self.lock:
+            start, before = self.clock(), self.totals()
+            try:
+                result = self.ask(question)
+            except Exception:
+                log.exception("A question failed")  # the question itself is not logged
+                self.record("failed", seconds=self.clock() - start)
+                return FAILED
+            prompt, completion, usd = (now - old for now, old in zip(self.totals(), before))
+            self.record(result.status, self.clock() - start, prompt, completion, usd)
         if result.status != "unverified":  # the model may pass on a second try, so don't keep it
             if len(self.answers) >= CACHED_ANSWERS:
                 del self.answers[next(iter(self.answers))]  # the oldest one
             self.answers[key] = result
-        return render(result)
+        return result
+
+    def respond(self, question: str, visitor: str) -> str:
+        """The same as HTML, for the page."""
+        outcome = self.answer(question, visitor)
+        if isinstance(outcome, Result):
+            return render(outcome)
+        return f"<p>{outcome}</p>" if outcome else ""
+
+    def record(
+        self,
+        status: str,
+        seconds: float = 0.0,
+        prompt: int = 0,
+        completion: int = 0,
+        usd: float = 0.0,
+        cached: bool = False,
+    ) -> None:
+        """One log line per query: when, what happened, how long, how many tokens, what it cost.
+        Neither the question nor the visitor's address is in it."""
+        entry = {
+            "time": datetime.now(UTC).isoformat(timespec="seconds"),
+            "status": status,
+            "cached": cached,
+            "seconds": round(seconds, 3),
+            "prompt_tokens": prompt,
+            "completion_tokens": completion,
+            "usd": round(usd, 6),
+        }
+        self.queries.append(entry)
+        query_log.info(json.dumps(entry))
+
+    def summary(self) -> dict:
+        """Latency and cost since the start, over at most the last KEPT_QUERIES queries."""
+        served = [q for q in self.queries if q["status"] in ("answered", "no_answer", "unverified")]
+        fresh = sorted(q["seconds"] for q in served if not q["cached"])
+        usd = sum(q["usd"] for q in self.queries)
+        return {
+            "queries": len(self.queries),
+            "by_status": dict(Counter(q["status"] for q in self.queries)),
+            "from_cache": sum(q["cached"] for q in served),
+            # Latency of the queries that ran the pipeline. A cached answer takes no time.
+            "p50_seconds": percentile(fresh, 0.50),
+            "p95_seconds": percentile(fresh, 0.95),
+            "usd_total": round(usd, 6),
+            "usd_per_1000_queries": round(1000 * usd / len(served), 4) if served else None,
+        }
 
 
 def footer() -> str:

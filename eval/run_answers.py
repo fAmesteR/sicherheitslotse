@@ -25,13 +25,19 @@ from lotse import config
 from lotse.chunking import passage
 from lotse.generation import llm, prompts
 from lotse.generation.answer import MARKER, sentences
-from lotse.metrics import over_runs
+from lotse.metrics import over_runs, regressions
 from lotse.pipeline import Ranked, Result, answer, index, retrieve
+from lotse.retrieval.index import fetch_index
 
 HERE = Path(__file__).parent
 RESULTS = config.ROOT / "eval" / "results"
 DETAILS = config.ROOT / "data" / "eval_answers.jsonl"  # full texts, to check the judge by hand
 CACHE = config.INDEX_DIR / "reranked.json"
+BASELINE = HERE / "baseline.json"
+# What the gate watches: do the quotes exist, and do the sentences stick to their sources?
+GATED = ("citation_validity", "faithfulness")
+# Wider than for retrieval, because the model gives different replies to the same prompt.
+TOLERANCE = 0.05
 
 JUDGE_TEXT = (HERE / "judge_prompt.md").read_text(encoding="utf-8")
 _sections = re.split(r"^## (\w+)\n", JUDGE_TEXT, flags=re.MULTILINE)  # intro, name, body, name, ...
@@ -151,15 +157,30 @@ def cost(model: str) -> float:
     return (used.get("prompt", 0) * price_in + used.get("completion", 0) * price_out) / 1e6
 
 
+def gated(result: dict) -> dict:
+    return {name: result["metrics"][name]["share"] for name in GATED}
+
+
+def save_baseline(result: dict) -> None:
+    """Keep this run's answer metrics next to the retrieval baseline that CI compares with."""
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
+    kept = ("date", "commit", "split", "runs", "questions", "origins", "answer_model")
+    baseline["answers"] = {"metrics": gated(result)} | {name: result[name] for name in kept}
+    BASELINE.write_text(json.dumps(baseline, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", default="dev", choices=["dev", "test"])
     parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--gate", action="store_true", help="fail if below eval/baseline.json")
+    parser.add_argument("--save-baseline", action="store_true", help="store this run as it")
     args = parser.parse_args()
     for model in (config.ANSWER_MODEL, config.JUDGE_MODEL):
         if model not in config.PRICES:
             raise SystemExit(f"Add the list price of {model} to PRICES in config.py")
 
+    fetch_index()  # a download in CI, nothing on a machine that has the index
     lines = (HERE / "questions.jsonl").read_text(encoding="utf-8").splitlines()
     questions = [q for q in map(json.loads, lines) if q["split"] == args.split]
     ranked = ranked_passages(questions)
@@ -225,6 +246,16 @@ def main() -> None:
     path = RESULTS / f"{result['date']}_{result['commit']}_answers.json"
     path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Saved {path.relative_to(config.ROOT)}, details in {DETAILS.relative_to(config.ROOT)}")
+
+    if args.save_baseline:
+        save_baseline(result)
+    if args.gate:
+        baseline = json.loads(BASELINE.read_text(encoding="utf-8"))["answers"]
+        if baseline["questions"] != result["questions"]:
+            raise SystemExit("The questions changed: measure a new baseline")
+        if failed := regressions(gated(result), baseline, TOLERANCE):
+            raise SystemExit("Quality gate failed\n" + "\n".join(failed))
+        print(f"Quality gate passed: {gated(result)} against {baseline['metrics']}")
 
 
 if __name__ == "__main__":

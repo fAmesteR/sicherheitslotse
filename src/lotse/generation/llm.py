@@ -14,11 +14,23 @@ from lotse.config import (
     JUDGE_EFFORT,
     JUDGE_MAX_TOKENS,
     JUDGE_MODEL,
+    PRICES,
 )
 from lotse.generation.answer import Answer
 
 # Tokens used per model since the program started, for the cost per answer.
 USAGE: dict[str, Counter] = {}
+
+
+def totals() -> tuple[int, int, float]:
+    """Prompt tokens, completion tokens and USD at list prices, since the program started."""
+    prompt = sum(used["prompt"] for used in USAGE.values())
+    completion = sum(used["completion"] for used in USAGE.values())
+    usd = sum(
+        (used["prompt"] * PRICES[model][0] + used["completion"] * PRICES[model][1]) / 1_000_000
+        for model, used in USAGE.items()
+    )
+    return prompt, completion, usd
 
 
 @cache

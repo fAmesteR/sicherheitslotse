@@ -15,7 +15,7 @@ from lotse.chunking import passage
 from lotse.config import RERANKER_MODEL, ROOT, SEARCH_CANDIDATES, SMALL_RERANKER_MODEL
 from lotse.metrics import has_all_gold, reciprocal_rank, regressions, wilson_interval
 from lotse.retrieval import bm25, dense, hybrid
-from lotse.retrieval.index import Index, load_index
+from lotse.retrieval.index import Index, fetch_index, load_index
 from lotse.retrieval.rerank import score
 
 QUESTIONS = Path(__file__).with_name("questions.jsonl")
@@ -68,6 +68,7 @@ def main() -> None:
 
     questions = [json.loads(line) for line in QUESTIONS.open(encoding="utf-8")]
     questions = [q for q in questions if q["split"] == args.split and q["answerable"]]
+    fetch_index()  # a download in CI, nothing on a machine that has the index
     index = load_index()
     vectors = dense.embed([q["question"] for q in questions])
     for question, vector in zip(questions, vectors):
@@ -110,7 +111,8 @@ def main() -> None:
     measured = {name: setups[GATED][name] for name in ("recall_at_5", "mrr_at_10")}
     if args.save_baseline:
         kept = ("date", "commit", "split", "chunks", "origins")
-        baseline = {"setup": GATED, "metrics": measured, "n": len(questions)}
+        baseline = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
+        baseline |= {"setup": GATED, "metrics": measured, "n": len(questions)}
         baseline |= {name: result[name] for name in kept}
         BASELINE.write_text(json.dumps(baseline, ensure_ascii=False, indent=2), encoding="utf-8")
     if args.gate:

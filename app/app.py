@@ -3,6 +3,7 @@
 uv run --env-file .env python app/app.py
 """
 
+import logging
 import sys
 from pathlib import Path
 
@@ -50,12 +51,12 @@ def retrieve(question: str) -> pipeline.Ranked:
     return pipeline.retrieve(pipeline.index(), question)
 
 
-lotse = Demo(lambda question: pipeline.answer(question, retrieve(question)))
+answers = Demo(lambda question: pipeline.answer(question, retrieve(question)))
 
 
 def respond(question: str, request: gr.Request) -> str:
     # Known limit: behind a proxy all visitors may share this address. Check it on the Space.
-    return lotse.respond(question, request.client.host)
+    return answers.respond(question, request.client.host)
 
 
 with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:
@@ -78,9 +79,13 @@ with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:
     )
     gr.Markdown(footer())
     gr.on([question.submit, button.click], respond, question, answer)
+    gr.api(answers.summary, api_name="metrics")  # latency and cost so far, as JSON
 
 demo.queue(default_concurrency_limit=1, max_size=20)  # one question at a time, twenty waiting
 
+# System fonts, so a visitor's browser loads nothing from Google.
+THEME = gr.themes.Default(font=["system-ui", "sans-serif"])
+
 if __name__ == "__main__":
-    # System fonts, so a visitor's browser loads nothing from Google.
-    demo.launch(theme=gr.themes.Default(font=["system-ui", "sans-serif"]), footer_links=[])
+    logging.basicConfig(level=logging.INFO, format="%(message)s")  # shows the query log
+    demo.launch(theme=THEME, footer_links=[])

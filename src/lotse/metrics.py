@@ -1,6 +1,6 @@
 """Retrieval metrics. `gold` lists what an answer needs; each inner list can supply one part."""
 
-from math import sqrt
+from math import ceil, sqrt
 from statistics import fmean
 
 Gold = list[list[str]]
@@ -60,3 +60,10 @@ def regressions(current: dict, baseline: dict, tolerance: float = 0.02) -> list[
         for name, expected in baseline["metrics"].items()
         if current[name] < expected - tolerance
     ]
+
+
+def percentile(ordered: list[float], share: float) -> float | None:
+    """The value that `share` of an ascending list lies at or below (nearest rank)."""
+    if not ordered:
+        return None
+    return ordered[max(0, ceil(share * len(ordered)) - 1)]

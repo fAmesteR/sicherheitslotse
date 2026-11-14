@@ -1,0 +1,15 @@
+{
+  "setup": "hybrid_rrf",
+  "metrics": {
+    "recall_at_5": 0.667,
+    "mrr_at_10": 0.542
+  },
+  "n": 60,
+  "date": "2026-11-14",
+  "commit": "dccbbf2",
+  "split": "dev",
+  "chunks": 1044,
+  "origins": [
+    "llm-draft"
+  ]
+}

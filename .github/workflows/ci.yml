@@ -10,6 +10,9 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Read-only, for the private index dataset. Forks have no secrets and skip the gate.
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
@@ -22,3 +25,27 @@ jobs:
       - run: uv run --no-sync pytest tests
       # The Space installs requirements.txt, so it must match the lockfile.
       - run: uv export --frozen --no-dev --no-hashes --no-emit-project --no-header | diff - requirements.txt
+
+      # The quality gate: search on the dev questions must not fall more than 0.02 below
+      # eval/baseline.json in Recall@5 or MRR@10. It runs hybrid search without the reranker,
+      # which a runner's CPU would need over an hour for.
+      - if: env.HF_TOKEN != ''
+        uses: actions/cache@v6.1.0
+        with:
+          path: ~/.cache/huggingface/hub
+          key: models-bge-m3
+      - if: env.HF_TOKEN != ''
+        run: uv run --no-sync python eval/run_retrieval.py --gate
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t sicherheitslotse .
+      # Without a key and the index the app can't start here. This proves that the image builds
+      # and that the service can be created inside it.
+      - run: >
+          docker run --rm sicherheitslotse python -c
+          "import sys; sys.path.insert(0, 'src');
+          from lotse.demo import Demo; from lotse.service import create_app;
+          print(sorted(route.path for route in create_app(Demo()).routes))"
