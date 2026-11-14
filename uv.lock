@@ -1702,6 +1702,10 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+test = [
+    { name = "pytest" },
+    { name = "ruff" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1720,6 +1724,10 @@ requires-dist = [
 dev = [
     { name = "docling", specifier = ">=2.145.0" },
     { name = "pypdfium2", specifier = ">=5.14.0" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+test = [
     { name = "pytest" },
     { name = "ruff" },
 ]

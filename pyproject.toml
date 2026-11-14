@@ -17,11 +17,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = [
-    "docling>=2.145.0",
-    "pypdfium2>=5.14.0",
+test = [
     "pytest",
     "ruff",
+]
+dev = [
+    { include-group = "test" },
+    "docling>=2.145.0",
+    "pypdfium2>=5.14.0",
 ]
 
 [build-system]
