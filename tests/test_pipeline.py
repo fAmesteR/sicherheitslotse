@@ -4,7 +4,7 @@ from lotse.chunking import passage
 from lotse.generation.answer import NO_ANSWER, UNVERIFIED, Answer, Citation
 from lotse.pipeline import answer
 from lotse.retrieval import bm25, hybrid
-from lotse.retrieval.index import Index
+from lotse.retrieval.index import Index, load_index, save_subset
 
 LAW = {
     "doc": "ArbZG",
@@ -93,3 +93,17 @@ def test_search_only_returns_documents_cleared_for_the_api():
     index = Index(chunks, embeddings, bm25.build([passage(chunk) for chunk in chunks]))
     question = np.array([1, 0, 0], dtype=np.float32)
     assert hybrid.search(index, "Fluchtwege", question, frozenset({"ArbZG"})) == [1, 2]
+
+
+def test_a_published_index_holds_only_the_documents_it_was_given(tmp_path):
+    chunks = [
+        {"doc": "Musterregel M1.2", "section": "5", "heading": "", "text": "Fluchtwege sind frei."},
+        {"doc": "ArbZG", "section": "§ 4", "heading": "", "text": "Ruhepausen sind Pflicht."},
+    ]
+    embeddings = np.array([[1, 0], [0, 1]], dtype=np.float32)
+    index = Index(chunks, embeddings, bm25.build([passage(chunk) for chunk in chunks]))
+    save_subset(index, frozenset({"ArbZG"}), tmp_path)
+    saved = load_index(tmp_path)
+    assert saved.chunks == chunks[1:] and saved.embeddings.tolist() == [[0, 1]]
+    assert bm25.search(saved.bm25, "Ruhepausen", k=1) == [0]
+    assert "Musterregel" not in "".join(file.read_text("latin-1") for file in tmp_path.rglob("*.*"))

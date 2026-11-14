@@ -7,6 +7,7 @@ PARSED_DIR = ROOT / "data" / "parsed"
 MANIFEST = ROOT / "data" / "manifest.json"
 CHUNKS = ROOT / "data" / "chunks.jsonl"
 INDEX_DIR = ROOT / "index"
+PUBLIC_INDEX_DIR = ROOT / "index_public"  # the part of the index that may leave this machine
 
 GII_URL = "https://www.gesetze-im-internet.de"
 BAUA_ASR_URL = "https://www.baua.de/DE/Angebote/Regelwerk/ASR"
@@ -52,6 +53,12 @@ RERANK_MAX_LENGTH = 512
 # Documents whose text may be sent to the answer API. The ASR stay on this machine until BAuA
 # allows their use.
 API_DOCS = frozenset(LAWS)
+
+# Where the public index and the demo live on Hugging Face. The dataset is private, because it
+# holds document text and should not hand it out again.
+INDEX_REPO = "fAmesteR/sicherheitslotse-index"
+INDEX_REVISION: str | None = None  # the commit to download; set after each upload
+SPACE_REPO = "fAmesteR/sicherheitslotse"
 
 ANSWER_MODEL = "mistral-small-2603"  # a dated name, so the model can't change under the evaluation
 ANSWER_MAX_TOKENS = 600  # several verbatim quotes don't fit in less

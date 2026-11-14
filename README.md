@@ -22,7 +22,7 @@ measured yet: that needs the test set, which comes next along with the public de
 | CI: lint and unit tests on every push | done |
 | Gradio demo on the 11 laws, run locally | done |
 | 100-question test set and the retrieval quality gate in CI | next |
-| Public Gradio demo on Hugging Face ZeroGPU | next |
+| Public Gradio demo on Hugging Face ZeroGPU | prepared, not deployed yet |
 
 ## How it works
 
@@ -151,6 +151,23 @@ uv run --env-file .env python app/app.py
 It shows the answer and, for each source, the passage with the quoted words marked and a link to
 the original. It searches the 11 laws only. A visitor gets 10 questions per 10 minutes and 300
 characters per question, and a repeated question is answered from memory without an API call.
+
+To publish the demo to a Hugging Face Space, after `hf auth login`:
+
+```bash
+uv run python scripts/publish_index.py --upload
+uv run python scripts/deploy_space.py --upload
+```
+
+The first writes an index of the 11 laws alone, 1,044 of the 1,554 chunks, and uploads it to a
+private dataset. The second pushes the app, the package, `requirements.txt` and
+[`space/README.md`](space/README.md) to the Space. It takes only files that git tracks. The Space
+downloads the index at startup and runs embedding and reranking in one ZeroGPU function, so a
+visitor's GPU quota pays for model time only.
+
+The laws-only index is not the full index with a filter. BM25 scores a word by how rare it is, and
+that changes when 510 chunks leave: on the 28 dev questions, 12 get one or two different candidates
+out of 20. Numbers for the public demo therefore have to be measured on the index it uses.
 
 To measure the answers on the dev split:
 

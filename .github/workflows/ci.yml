@@ -20,3 +20,5 @@ jobs:
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
       - run: uv run --no-sync pytest tests
+      # The Space installs requirements.txt, so it must match the lockfile.
+      - run: uv export --frozen --no-dev --no-hashes --no-emit-project --no-header | diff - requirements.txt

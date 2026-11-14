@@ -1872,11 +1872,13 @@ source = { editable = "." }
 dependencies = [
     { name = "bm25s" },
     { name = "gradio" },
+    { name = "huggingface-hub" },
     { name = "lxml" },
     { name = "mistralai" },
     { name = "numpy" },
     { name = "pydantic" },
     { name = "pystemmer" },
+    { name = "spaces" },
     { name = "tokenizers" },
     { name = "torch" },
     { name = "transformers" },
@@ -1898,11 +1900,13 @@ test = [
 requires-dist = [
     { name = "bm25s", specifier = ">=0.3.16" },
     { name = "gradio", specifier = ">=6.32.0" },
+    { name = "huggingface-hub", specifier = ">=1.33.0" },
     { name = "lxml" },
     { name = "mistralai", specifier = ">=3.7.0" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pydantic", specifier = ">=2.14" },
     { name = "pystemmer", specifier = ">=3.1.0" },
+    { name = "spaces", specifier = ">=0.52.0" },
     { name = "tokenizers" },
     { name = "torch", specifier = "==2.13.0" },
     { name = "transformers", specifier = ">=5.22.1" },
@@ -1936,6 +1940,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/19/63/0b6bae54546aed98d72f12d09df57b19a287f01c84d22047fa2e23772ab9/soupsieve-3.0.4.tar.gz", hash = "sha256:924fab84ae21604c19e175e1f39815eb6fa83ba23836e09e9de180925e5bc4c0", size = 119017, upload-time = "2026-10-22T00:45:26.362Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/07/66/473f7ca0be0b06e38ee8c85ee2db184e3981bd769fac2e7c19c8a8865211/soupsieve-3.0.4-py3-none-any.whl", hash = "sha256:8412826614f9c632227067d0985aeb9f584bd15efc852955430e097a9fe7afbf", size = 42458, upload-time = "2026-10-22T00:45:24.843Z" },
+]
+
+[[package]]
+name = "spaces"
+version = "0.52.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "packaging" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/1c/3d89f0c75b7eede05dce0f972a204fd100151d330741cacefc7cf99c6bd1/spaces-0.52.0.tar.gz", hash = "sha256:b4dded3049cca6444e5be3c97b4d636cc6a819d4b0be32a24db202de3d25fc75", size = 92075, upload-time = "2026-11-13T12:01:25.512Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/07/a2b14bf897e571bda0ca61811f4f0d4306e315f12f01ac24d72dfb65e2aa/spaces-0.52.0-py3-none-any.whl", hash = "sha256:89ea3d5d4adbb883cba1d923f1343765fd878529dbaba79fd5034a860bf328a7", size = 116548, upload-time = "2026-11-13T12:01:24.11Z" },
 ]
 
 [[package]]

@@ -3,12 +3,19 @@
 uv run --env-file .env python app/app.py
 """
 
+import sys
+from pathlib import Path
+
 import gradio as gr
+import spaces  # ZeroGPU needs this imported before torch sets up CUDA
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))  # a Space installs no package
 
 from lotse import pipeline
 from lotse.demo import MAX_QUESTION_CHARS, Demo, footer
 from lotse.generation import llm
 from lotse.retrieval import dense, rerank
+from lotse.retrieval.index import fetch_index
 
 # One per question type: everyday, fact, duties, and one the sources don't answer.
 EXAMPLES = [
@@ -28,12 +35,22 @@ INTRO = (
 )
 
 # Load everything at startup, so a missing key or a stale index stops the app here and not on a
-# visitor's first question.
+# visitor's first question. On ZeroGPU the models also have to be on the GPU before any request.
+fetch_index()
 pipeline.index()
 llm.client()
 dense.load()
 rerank.load()
-lotse = Demo()
+
+
+@spaces.GPU(duration=20)
+def retrieve(question: str) -> pipeline.Ranked:
+    """Embedding and reranking, the only steps that need the GPU. A visitor's daily GPU quota pays
+    for this function alone: the API call and the check run outside it."""
+    return pipeline.retrieve(pipeline.index(), question)
+
+
+lotse = Demo(lambda question: pipeline.answer(question, retrieve(question)))
 
 
 def respond(question: str, request: gr.Request) -> str:

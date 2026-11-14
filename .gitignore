@@ -9,3 +9,4 @@ notes/
 data/*
 !data/manifest.json
 index/
+index_public/
