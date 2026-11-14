@@ -7,8 +7,8 @@ Beantwortet Fragen zum deutschen Arbeitsschutz, mit exakten Quellenangaben und g
 Answers questions about German occupational-safety rules, with exact citations and measured quality.
 
 **Status: in development.** Search over 11 laws and 5 technical rules works, and the answer step
-with its citation check is built. Answer quality isn't measured yet: that needs the test set, which
-comes next along with the public demo.
+with its citation check is built. A Gradio demo runs locally on the 11 laws. Answer quality isn't
+measured yet: that needs the test set, which comes next along with the public demo.
 
 | Part | State |
 |---|---|
@@ -20,6 +20,7 @@ comes next along with the public demo.
 | Refusal when the sources don't cover a question | built, score threshold not tuned yet |
 | Answer evaluation with an LLM judge | built, waiting for reviewed questions |
 | CI: lint and unit tests on every push | done |
+| Gradio demo on the 11 laws, run locally | done |
 | 100-question test set and the retrieval quality gate in CI | next |
 | Public Gradio demo on Hugging Face ZeroGPU | next |
 
@@ -140,6 +141,16 @@ uv run --env-file .env python -m lotse.pipeline "Wie lange darf ich pro Tag arbe
 
 Add `--show-prompt` to see the passages and the exact prompt without calling the API. On a CPU the
 reranker makes one question take about a minute.
+
+To open the demo in a browser, at `http://localhost:7860`:
+
+```bash
+uv run --env-file .env python app/app.py
+```
+
+It shows the answer and, for each source, the passage with the quoted words marked and a link to
+the original. It searches the 11 laws only. A visitor gets 10 questions per 10 minutes and 300
+characters per question, and a repeated question is answered from memory without an API call.
 
 To measure the answers on the dev split:
 

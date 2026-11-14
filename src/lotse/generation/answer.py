@@ -84,6 +84,25 @@ def squeeze(text: str) -> str:
     return "".join(normalise(text).casefold().split())
 
 
+def locate(text: str, quote: str) -> tuple[int, int] | None:
+    """Where a quote sits in its passage text, as (start, end), by the same rules as the check.
+    The demo highlights that part."""
+    quote = normalise(quote).strip(" \"'.,;:!?")
+    needles = [squeeze(quote), squeeze(QUOTED_LABEL.sub(" ", quote))]
+    labels = {at for match in LINE_LABEL.finditer(text) for at in range(*match.span())}
+    for skipped in (set(), labels):
+        squeezed, positions = "", []  # positions[i] is where squeezed[i] sits in text
+        for at, char in enumerate(text):
+            if at not in skipped:
+                piece = squeeze(char)
+                squeezed += piece
+                positions += [at] * len(piece)
+        for needle in needles:
+            if needle and (found := squeezed.find(needle)) >= 0:
+                return positions[found], positions[found + len(needle) - 1] + 1
+    return None
+
+
 def sentences(text: str) -> list[str]:
     """When in doubt, split: a piece cut off by mistake only fails the check, while two sentences
     read as one would let the second go without a source."""
