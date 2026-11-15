@@ -9,7 +9,9 @@ Answers questions about German occupational-safety rules, with exact citations a
 **Status: in development.** Search, cited answers, the evaluation, a quality gate in CI, a web
 service with an API and a Docker image are built. The numbers below are a first reading: the 100
 questions were drafted by an LLM and not yet reviewed by hand, and the 20 test questions have not
-been run. The demo is not public yet.
+been run.
+
+**Live demo: [huggingface.co/spaces/fAmesteR/sicherheitslotse](https://huggingface.co/spaces/fAmesteR/sicherheitslotse)**, on the 11 laws.
 
 | Part | State |
 |---|---|
@@ -23,10 +25,10 @@ been run. The demo is not public yet.
 | Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
 | CI: lint, unit tests, Docker build | done |
 | Quality gate in CI on Recall@5 and MRR@10 | built, switched on once the index is uploaded |
-| Gradio demo and JSON API (FastAPI) on the 11 laws | done, run locally |
+| Gradio demo and JSON API (FastAPI) on the 11 laws | done |
 | Latency and cost logged for every query | done |
 | Docker image | builds in CI |
-| Public deployment | prepared, not deployed yet |
+| Public deployment | live on a Hugging Face Space with ZeroGPU |
 
 ## How it works
 
@@ -108,6 +110,21 @@ Mistral Large judges them. Every run is in
 [`eval/results`](eval/results), and [`eval/baseline.json`](eval/baseline.json) holds what CI
 compares against.
 
+### The live demo
+
+30 different dev questions asked of the live Space on 2026-11-15 and 2026-11-16, timed two ways:
+
+| | p50 | p95 |
+|---|---:|---:|
+| In the app, question in to answer out (its `/metrics`) | 1.8 s | 4.7 s |
+| For a visitor, network and queue included | 2.5 s | 8.4 s |
+
+With n = 30, p95 is the second-slowest question. The two slowest for a visitor, 8.4 s and 21.3 s,
+were each the first question after the Space had been idle. Without them p95 is 4.6 s. The
+Mistral API cost $0.0096 for the 30, which is **$0.32 per 1,000 queries** on this mix of 23
+answerable and 7 unanswerable questions. The GPU is paid for by the flat Hugging Face PRO plan.
+The run is in [`eval/results/2026-11-16_live.json`](eval/results/2026-11-16_live.json).
+
 ### Reranker speed
 
 Median time to rerank 20 passages, over 8 questions:
@@ -143,6 +160,12 @@ safety, where a neighbouring rule reads like a fit. This is the main open proble
 because the passage contains the paragraph label "(2)". Now a number a sentence states must be a
 value in its source: list labels, "§ 5", "Abs. 2" and the like don't count, and a digit glued to a
 letter ("m²" after normalisation, "M1.2") is no number. Tests cover each case.
+
+**The live demo reloaded the reranker for every question.** The app loads it at startup with
+`load()`, and the search called `load(name)`. `functools.cache` keeps those as two entries, so the
+startup copy was never used. Locally that only cost a second load. On ZeroGPU, where each GPU call
+runs in its own worker, every question loaded 2.3 GB again and took 5 to 7 s. Fixed, the same
+questions take 2 to 3 s.
 
 **Fusing the two searches is worse than dense search alone here**, 0.67 against 0.73 in
 Recall@5, because BM25 alone reaches only 0.42 on everyday wording. The reranker more than makes
@@ -259,6 +282,17 @@ private dataset. The second pushes the app, the package, `requirements.txt` and
 [`space/README.md`](space/README.md) to the Space. It takes only files that git tracks. The Space
 downloads the index at startup and runs embedding and reranking in one ZeroGPU function, so a
 visitor's GPU quota pays for model time only.
+
+The Space's builder installs its own `spaces` and `gradio[mcp,oauth]` next to
+`requirements.txt`, so `pyproject.toml` pins the same, or pip stops on a conflict. Hugging Face
+now wants a paid plan to create a Gradio Space, so the script only uploads to one that exists.
+The Space's API takes the same question as the page:
+
+```python
+from gradio_client import Client
+
+Client("fAmesteR/sicherheitslotse").predict("Wie lange darf ich am Tag arbeiten?", api_name="/ask")
+```
 
 The laws-only index is not the full index with a filter. BM25 scores a word by how rare it is, and
 that changes when 510 chunks leave: on the 28 dev questions, 12 get one or two different candidates
