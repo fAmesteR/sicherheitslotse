@@ -91,18 +91,20 @@ the laws-only index of 1,044 chunks, the one the public demo will use.
 
 n = 60. The 95% interval for 0.80 is 0.68 to 0.88.
 
-| Answers, one run | Value | Out of |
-|---|---|---|
-| Answer rate | 0.82 | 60 answerable questions |
-| Citation validity: first replies that pass the check | 0.77 | 65 replies |
-| Correctness: judged correct against the reference, "partly" counts as not correct | 0.78 | 49 shown answers |
-| Faithfulness: sentences the judge finds supported by their source | 0.87 | 86 sentences |
-| Refusal, off-topic questions | 10 of 10 | |
-| Refusal, near-domain questions | 3 of 10 | |
-| API time per answer, p50 and p95 | 1.5 s and 3.5 s | |
-| API cost per answer | $0.00039 | |
+| Answers, mean of three runs | Value | 95% interval | Out of, per run |
+|---|---|---|---|
+| Answer rate | 0.75 | 0.63 to 0.84 | 60 answerable questions |
+| Citation validity: first replies that pass the check | 0.73 | 0.60 to 0.83 | about 59 replies |
+| Correctness: judged correct against the reference, "partly" counts as not correct | 0.79 | 0.66 to 0.89 | about 44 shown answers |
+| Faithfulness: sentences the judge finds supported by their source | 0.89 | 0.81 to 0.95 | about 76 sentences |
+| Refusal, off-topic questions | 10 of 10 in every run | | |
+| Refusal, near-domain questions | 7 of 10 in every run | | |
+| API time per answer, p50 and p95 | 1.3 s and 3.5 s | | |
+| API cost per answer | $0.00039 | | |
 
-Mistral Small writes the answers and Mistral Large judges them. Every run is in
+The intervals use the per-run n, so they don't pretend three runs are three times the questions.
+The runs agree closely: answer rate 0.77, 0.72 and 0.77. Mistral Small writes the answers and
+Mistral Large judges them. Every run is in
 [`eval/results`](eval/results), and [`eval/baseline.json`](eval/baseline.json) holds what CI
 compares against.
 
@@ -125,20 +127,30 @@ at a quiet hour with one caller, so the live demo's median will be the real test
 
 **Near-domain questions get answered from a neighbouring rule.** Asked how long a 16-year-old
 trainee may work, the system answered "8 hours" from the Arbeitszeitgesetz, which doesn't apply
-to minors. 7 of 10 such questions got an answer. The citation check can't catch this, because
-the quote is real. A rerank-score threshold doesn't separate them either: a cut at 0 refuses 19
-of the 20 unanswerable questions but also drops 19 of the 49 good answers. This is the main
-open problem.
+to minors. In the first run 7 of 10 such questions got an answer. The citation check can't catch
+this, because the quote is real. A rerank-score threshold doesn't separate them either: a cut at 0
+refuses 19 of the 20 unanswerable questions but also drops 19 of the 49 good answers.
+
+What helped was one rule in the prompt: check that a source covers the same group of people, the
+same role and the same subject, or refuse. I compared two wordings, three runs each, without the
+judge. The rule raised near-domain refusals from 4 to 5 of 10 to 8 to 9 of 10, and cost about 3
+of 60 answerable questions. A second wording that also named the laws' scope did no better and
+named topics from the dev questions, so I kept the plain one. With the judge it refuses 7 of 10.
+Still answered in every run: night work while pregnant, the site safety coordinator, and laser
+safety, where a neighbouring rule reads like a fit. This is the main open problem.
 
 **The number check let one invented number through.** "Mindestens zwei Ersthelfer" passed,
-because the passage contains the paragraph label "(2)". Labels should not count as values.
+because the passage contains the paragraph label "(2)". Now a number a sentence states must be a
+value in its source: list labels, "§ 5", "Abs. 2" and the like don't count, and a digit glued to a
+letter ("m²" after normalisation, "M1.2") is no number. Tests cover each case.
 
 **Fusing the two searches is worse than dense search alone here**, 0.67 against 0.73 in
 Recall@5, because BM25 alone reaches only 0.42 on everyday wording. The reranker more than makes
 up for it (0.80).
 
 **Questions that need two sections are the weak type.** Both sections are in the top 5 for 7 of
-12, and the judge rates only 3 of 12 answers fully correct.
+12. About 7 of 12 get an answer, and the judge rates only 1 of 12 fully correct, mostly "partly":
+the answer gives one section and misses the other.
 
 **A clean-looking metric picked the wrong parser model.** I converted the PDFs with three Docling
 layout models and first preferred `egret_xlarge`, which left no bare values outside a table. My check

@@ -1,0 +1,513 @@
+{
+  "date": "2026-11-15",
+  "commit": "c22a39e",
+  "split": "dev",
+  "runs": 3,
+  "questions": 80,
+  "origins": [
+    "llm-draft"
+  ],
+  "documents": 11,
+  "answer_model": "mistral-small-2603",
+  "judge_model": "mistral-large-4-0",
+  "judge_effort": "medium",
+  "prompts_sha256": "53b02845fe69",
+  "metrics": {
+    "answer_rate": {
+      "share": 0.75,
+      "per_run": [
+        0.767,
+        0.717,
+        0.767
+      ],
+      "n": 60,
+      "interval_95": [
+        0.628,
+        0.842
+      ]
+    },
+    "citation_validity": {
+      "share": 0.73,
+      "per_run": [
+        0.733,
+        0.729,
+        0.729
+      ],
+      "n": 59,
+      "interval_95": [
+        0.604,
+        0.826
+      ]
+    },
+    "correctness": {
+      "share": 0.789,
+      "per_run": [
+        0.8,
+        0.786,
+        0.783
+      ],
+      "n": 44,
+      "interval_95": [
+        0.655,
+        0.888
+      ]
+    },
+    "faithfulness": {
+      "share": 0.891,
+      "per_run": [
+        0.91,
+        0.895,
+        0.867
+      ],
+      "n": 76,
+      "interval_95": [
+        0.806,
+        0.946
+      ]
+    },
+    "refusal_rate": {
+      "share": 0.85,
+      "per_run": [
+        0.85,
+        0.85,
+        0.85
+      ],
+      "n": 20,
+      "interval_95": [
+        0.64,
+        0.948
+      ]
+    },
+    "refusal_rate_near_domain": {
+      "share": 0.7,
+      "per_run": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "n": 10,
+      "interval_95": [
+        0.397,
+        0.892
+      ]
+    }
+  },
+  "api_seconds": {
+    "p50": 1.34,
+    "p95": 3.4979999999999998
+  },
+  "usd_per_question": 0.00039,
+  "usd_judge_total": 0.705,
+  "tokens": {
+    "mistral-small-2603": {
+      "prompt": 437008,
+      "completion": 45934
+    },
+    "mistral-large-4-0": {
+      "prompt": 141382,
+      "completion": 288455
+    }
+  },
+  "outcomes": {
+    "d001": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d002": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d003": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d005": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d007": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d008": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d009": [
+      "correct",
+      "unverified",
+      "correct"
+    ],
+    "d011": [
+      "partly",
+      "partly",
+      "correct"
+    ],
+    "d012": [
+      "unverified",
+      "unverified",
+      "unverified"
+    ],
+    "d013": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d014": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d015": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d016": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d017": [
+      "correct",
+      "unverified",
+      "correct"
+    ],
+    "d019": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d020": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d021": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d022": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d024": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d025": [
+      "partly",
+      "correct",
+      "correct"
+    ],
+    "d027": [
+      "unverified",
+      "unverified",
+      "unverified"
+    ],
+    "d029": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d030": [
+      "correct",
+      "partly",
+      "correct"
+    ],
+    "d031": [
+      "unverified",
+      "no_answer",
+      "no_answer"
+    ],
+    "d032": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d033": [
+      "correct",
+      "unverified",
+      "unverified"
+    ],
+    "d034": [
+      "answered",
+      "answered",
+      "partly"
+    ],
+    "d035": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d036": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d037": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d038": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d039": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d040": [
+      "unverified",
+      "partly",
+      "partly"
+    ],
+    "d041": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d042": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d043": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d044": [
+      "partly",
+      "unverified",
+      "unverified"
+    ],
+    "d045": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d048": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d049": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d050": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d051": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d052": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d053": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d056": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d057": [
+      "correct",
+      "correct",
+      "correct"
+    ],
+    "d058": [
+      "unverified",
+      "unverified",
+      "partly"
+    ],
+    "d059": [
+      "correct",
+      "no_answer",
+      "correct"
+    ],
+    "d061": [
+      "partly",
+      "wrong",
+      "partly"
+    ],
+    "d062": [
+      "partly",
+      "correct",
+      "partly"
+    ],
+    "d063": [
+      "partly",
+      "partly",
+      "partly"
+    ],
+    "d064": [
+      "unverified",
+      "partly",
+      "unverified"
+    ],
+    "d065": [
+      "correct",
+      "partly",
+      "partly"
+    ],
+    "d066": [
+      "unverified",
+      "correct",
+      "unverified"
+    ],
+    "d067": [
+      "partly",
+      "unverified",
+      "unverified"
+    ],
+    "d068": [
+      "unverified",
+      "wrong",
+      "wrong"
+    ],
+    "d069": [
+      "partly",
+      "partly",
+      "partly"
+    ],
+    "d070": [
+      "unverified",
+      "unverified",
+      "unverified"
+    ],
+    "d071": [
+      "partly",
+      "unverified",
+      "partly"
+    ],
+    "d072": [
+      "unverified",
+      "unverified",
+      "unverified"
+    ],
+    "d076": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d077": [
+      "answered",
+      "answered",
+      "answered"
+    ],
+    "d078": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d079": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d080": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d081": [
+      "answered",
+      "answered",
+      "answered"
+    ],
+    "d082": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d083": [
+      "answered",
+      "answered",
+      "answered"
+    ],
+    "d084": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d085": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d089": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d090": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d091": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d092": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d093": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d094": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d095": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d096": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d097": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ],
+    "d098": [
+      "no_answer",
+      "no_answer",
+      "no_answer"
+    ]
+  }
+}

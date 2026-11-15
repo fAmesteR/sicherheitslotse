@@ -14,13 +14,13 @@
   ],
   "answers": {
     "metrics": {
-      "citation_validity": 0.769,
-      "faithfulness": 0.872
+      "citation_validity": 0.73,
+      "faithfulness": 0.891
     },
-    "date": "2026-11-14",
-    "commit": "67d2ebb",
+    "date": "2026-11-15",
+    "commit": "c22a39e",
     "split": "dev",
-    "runs": 1,
+    "runs": 3,
     "questions": 80,
     "origins": [
       "llm-draft"
