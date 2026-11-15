@@ -1,4 +1,13 @@
-from lotse.demo import MAX_QUESTION_CHARS, TOO_LONG, TOO_MANY, Demo, RateLimit, footer, render
+from lotse.demo import (
+    MAX_QUESTION_CHARS,
+    TOO_LONG,
+    TOO_MANY,
+    Demo,
+    RateLimit,
+    footer,
+    render,
+    visitor,
+)
 from lotse.generation.answer import NO_ANSWER, UNVERIFIED, Answer, Citation, check, locate
 from lotse.pipeline import Result
 
@@ -51,6 +60,18 @@ def test_the_limit_counts_per_visitor_and_forgets_after_the_window():
     now[0] = 601
     assert limit.allow("a")
     assert "b" not in limit.asked
+
+
+def test_behind_a_proxy_the_visitor_is_the_last_public_forwarded_address():
+    # The visitor wrote 1.2.3.4 into the header; the proxy appended the address it really saw.
+    assert visitor("10.0.0.5", "1.2.3.4, 93.184.216.34, 10.0.0.9") == "93.184.216.34"
+    assert visitor("10.0.0.5", "2a00:1450::1") == "2a00:1450::1"
+
+
+def test_a_direct_or_unknown_connection_is_taken_as_it_is():
+    assert visitor("93.184.216.34", "1.2.3.4") == "93.184.216.34"  # a header anyone can set
+    assert visitor("127.0.0.1", "") == "127.0.0.1"
+    assert visitor("10.0.0.5", "unknown, 192.168.1.2") == "10.0.0.5"
 
 
 def test_the_source_is_shown_with_its_quote_marked_and_its_text_escaped():

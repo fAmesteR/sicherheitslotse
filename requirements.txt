@@ -19,6 +19,9 @@ certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
+    #   requests
+charset-normalizer==3.5.2
+    # via requests
 click==8.5.0
     # via
     #   huggingface-hub
@@ -47,7 +50,9 @@ fsspec==2026.9.0
     #   huggingface-hub
     #   torch
 gradio==6.32.0
-    # via sicherheitslotse
+    # via
+    #   sicherheitslotse
+    #   spaces
 gradio-client==2.7.2
     # via
     #   gradio
@@ -90,6 +95,7 @@ idna==3.20
     #   anyio
     #   httpx
     #   httpx2
+    #   requests
 jinja2==3.1.6
     # via
     #   gradio
@@ -210,6 +216,8 @@ pyyaml==6.0.3
     #   transformers
 regex==2026.9.29
     # via transformers
+requests==2.34.2
+    # via spaces
 rich==15.0.0
     # via typer
 safehttpx==0.1.7
@@ -224,7 +232,7 @@ shellingham==1.5.4
     # via typer
 six==1.17.0
     # via python-dateutil
-spaces==0.52.0
+spaces==0.51.3
     # via sicherheitslotse
 starlette==1.10.0
     # via
@@ -282,5 +290,7 @@ tzdata==2026.6
     # via
     #   pandas
     #   python-dateutil
+urllib3==2.8.0
+    # via requests
 uvicorn==0.54.0
     # via gradio

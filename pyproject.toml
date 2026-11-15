@@ -13,7 +13,7 @@ dependencies = [
     "numpy>=2.5.4",
     "pydantic>=2.14",
     "pystemmer>=3.1.0",
-    "spaces>=0.52.0",
+    "spaces==0.51.3",  # the version the Space's builder installs; any other pin fails the build
     "tokenizers",
     "torch==2.13.0",
     "transformers>=5.22.1",

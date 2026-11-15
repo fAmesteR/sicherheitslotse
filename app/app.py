@@ -13,7 +13,7 @@ import spaces  # ZeroGPU needs this imported before torch sets up CUDA
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))  # a Space installs no package
 
 from lotse import pipeline
-from lotse.demo import MAX_QUESTION_CHARS, Demo, footer
+from lotse.demo import MAX_QUESTION_CHARS, Demo, footer, visitor
 from lotse.generation import llm
 from lotse.retrieval import dense, rerank
 from lotse.retrieval.index import fetch_index
@@ -55,8 +55,8 @@ answers = Demo(lambda question: pipeline.answer(question, retrieve(question)))
 
 
 def respond(question: str, request: gr.Request) -> str:
-    # Known limit: behind a proxy all visitors may share this address. Check it on the Space.
-    return answers.respond(question, request.client.host)
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return answers.respond(question, visitor(request.client.host, forwarded))
 
 
 with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:

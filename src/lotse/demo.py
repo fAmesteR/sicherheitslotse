@@ -4,6 +4,7 @@ Nothing here knows Gradio, so the tests run without a browser.
 """
 
 import html
+import ipaddress
 import json
 import logging
 import threading
@@ -69,6 +70,33 @@ class RateLimit:
             return False
         times.append(now)
         return True
+
+
+def public(address: str) -> bool:
+    try:
+        return ipaddress.ip_address(address).is_global
+    except ValueError:
+        return False
+
+
+def visitor(host: str, forwarded: str = "") -> str:
+    """Who asks, for the rate limit. Behind a proxy, as on Hugging Face, the connection comes from
+    the proxy's private address and the visitor's is in X-Forwarded-For. Each proxy appends the
+    address it saw, so read from the right and take the first public one: anything a visitor wrote
+    there stands further left. A direct connection's header is ignored, since anyone can set it."""
+    global warned
+    if public(host):
+        return host
+    for hop in reversed(forwarded.split(",")):
+        if public(hop := hop.strip()):
+            return hop
+    if not warned:
+        log.warning("No public visitor address: everyone from %s shares one rate limit.", host)
+        warned = True
+    return host
+
+
+warned = False
 
 
 def german_date(value: str) -> str:
