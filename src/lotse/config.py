@@ -59,7 +59,7 @@ API_DOCS = frozenset(LAWS)
 # Where the public index and the demo live on Hugging Face. The dataset is private, because it
 # holds document text and should not hand it out again.
 INDEX_REPO = "fAmesteR/sicherheitslotse-index"
-INDEX_REVISION: str | None = None  # the commit to download; set after each upload
+INDEX_REVISION: str | None = "decc67c9c8c5c42eab45e097a8cd207a394231cb"  # set after each upload
 SPACE_REPO = "fAmesteR/sicherheitslotse"
 
 ANSWER_MODEL = "mistral-small-2603"  # a dated name, so the model can't change under the evaluation
