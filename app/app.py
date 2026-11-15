@@ -78,7 +78,7 @@ with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:
         label="Beispielfragen",
     )
     gr.Markdown(footer())
-    gr.on([question.submit, button.click], respond, question, answer)
+    gr.on([question.submit, button.click], respond, question, answer, api_name="ask")
     gr.api(answers.summary, api_name="metrics")  # latency and cost so far, as JSON
 
 demo.queue(default_concurrency_limit=1, max_size=20)  # one question at a time, twenty waiting

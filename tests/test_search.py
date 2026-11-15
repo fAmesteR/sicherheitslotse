@@ -53,3 +53,27 @@ def test_keyword_search_leaves_out_chunks_without_a_shared_word():
 def test_dense_search_ranks_by_dot_product():
     embeddings = np.array([[1, 0], [0, 1], [0.6, 0.8]], dtype=np.float32)
     assert dense.search(embeddings, np.array([0, 1], dtype=np.float32), k=2) == [1, 2]
+
+
+def test_the_reranker_loads_once_whether_or_not_its_name_is_given(monkeypatch):
+    from lotse.config import RERANKER_MODEL
+    from lotse.retrieval import rerank
+
+    class Model:
+        def to(self, device):
+            return self
+
+        def eval(self):
+            return self
+
+    loads = []
+    monkeypatch.setattr(rerank.AutoTokenizer, "from_pretrained", lambda name: loads.append(name))
+    monkeypatch.setattr(
+        rerank.AutoModelForSequenceClassification, "from_pretrained", lambda name: Model()
+    )
+    rerank.loaded.cache_clear()
+    try:
+        assert rerank.load() is rerank.load(RERANKER_MODEL)
+        assert loads == [RERANKER_MODEL]
+    finally:
+        rerank.loaded.cache_clear()

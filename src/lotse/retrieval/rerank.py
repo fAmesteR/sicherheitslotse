@@ -8,8 +8,14 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from lotse.config import RERANK_MAX_LENGTH, RERANKER_MODEL
 
 
-@cache
 def load(name: str = RERANKER_MODEL):
+    # functools.cache keys load() and load(RERANKER_MODEL) apart, which loaded the model twice:
+    # once at startup and again on the first question. Each name is cached once below.
+    return loaded(name)
+
+
+@cache
+def loaded(name: str):
     tokenizer = AutoTokenizer.from_pretrained(name)
     model = AutoModelForSequenceClassification.from_pretrained(name)
     device = "cuda" if torch.cuda.is_available() else "cpu"
