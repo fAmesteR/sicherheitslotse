@@ -41,7 +41,9 @@ def main() -> None:
         print("\n".join(stage(Path(folder))))
         if args.upload:
             api = HfApi()
-            api.create_repo(SPACE_REPO, repo_type="space", space_sdk="gradio", exist_ok=True)
+            # Creating a Gradio Space now needs a paid plan, even when it exists, so ask first.
+            if not api.repo_exists(SPACE_REPO, repo_type="space"):
+                api.create_repo(SPACE_REPO, repo_type="space", space_sdk="gradio")
             api.upload_folder(
                 folder_path=folder,
                 repo_id=SPACE_REPO,
