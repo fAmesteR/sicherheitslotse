@@ -6,12 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "bm25s>=0.3.16",
-    "gradio>=6.32.0",
+    "gradio[mcp,oauth]==6.32.0",  # what the Space's builder installs, so the lock agrees with it
     "huggingface-hub>=1.33.0",
     "lxml",
     "mistralai>=3.7.0",
     "numpy>=2.5.4",
-    "pydantic>=2.14",
+    "pydantic>=2.11.10",
     "pystemmer>=3.1.0",
     "spaces==0.51.3",  # the version the Space's builder installs; any other pin fails the build
     "tokenizers",
