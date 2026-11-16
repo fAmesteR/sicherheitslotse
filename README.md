@@ -28,10 +28,18 @@ the laws-only index of 1,044 chunks, the one the public demo uses.
 | BM25 only | 0.42 | 0.35 |
 | Dense only (bge-m3) | 0.73 | 0.71 |
 | Hybrid (RRF) | 0.67 | 0.54 |
-| Hybrid + `bge-reranker-v2-m3` (the demo's setup) | 0.80 | 0.73 |
 | Hybrid + `mmarco-mMiniLMv2-L12-H384-v1` | 0.78 | 0.66 |
+| Hybrid + `bge-reranker-v2-m3`, prefix for both | 0.80 | 0.73 |
+| **Hybrid + `bge-reranker-v2-m3`, reranker without the prefix (the demo's setup)** | **0.83** | **0.74** |
+| No context prefix anywhere | 0.85 | 0.74 |
+| No context prefix: dense only | 0.68 | 0.64 |
 
-n = 60. The 95% interval for 0.80 is 0.68 to 0.88.
+n = 60. The 95% interval for 0.83 is 0.72 to 0.91. Every chunk is searched with a prefix such as
+"ArbZG § 5 Ruhezeit:" in front. It helps dense search (0.73 against 0.68), but the reranker
+judges better without it, mostly on everyday wording (11 of 12 against 9 of 12). It isn't
+truncation: no chunk reaches the reranker's limit of 512 tokens either way. So search keeps the
+prefix and the reranker reads the bare text. Removing the prefix everywhere gains one more
+question, which is within noise and would need a new index.
 
 | Answers, mean of three runs | Value | 95% interval | Out of, per run |
 |---|---|---|---|
@@ -99,7 +107,9 @@ flowchart LR
     F --> H[Reciprocal Rank Fusion top 20]
     G --> H
     H --> I[Cross-encoder top 5]
-    I --> J[Mistral Small, answer as JSON]
+    I --> T{Best score at least -5.8?}
+    T -- no --> R[Refused, no API call]
+    T -- yes --> J[Mistral Small, answer as JSON]
     J --> K{Citation check}
     K -- passes --> L[Answer with sources]
     K -- fails twice --> M[No answer shown]
@@ -111,6 +121,8 @@ flowchart LR
   embeddings find passages when someone asks in everyday words.
 - **Reciprocal Rank Fusion merges the two lists** by rank, so their scores never have to be compared.
 - **A cross-encoder reads the top 20 again**, question and passage together, and keeps the best 5.
+  Search sees each chunk with its law, § and heading in front; the cross-encoder sees the bare
+  text, which measured better.
 - **The index stays in memory.** A few thousand chunks fit in NumPy, so there is no vector database.
   Docling runs once, offline, and the app doesn't depend on it.
 - **The model answers in a fixed schema:** the text with `[n]` markers, plus one verbatim quote per
@@ -133,7 +145,7 @@ trainee may work, the system answered "8 hours" from the Arbeitszeitgesetz, whic
 to minors. In the first run 7 of 10 such questions got an answer. The citation check can't catch
 this, because the quote is real. A rerank-score threshold doesn't separate them either: a cut at 0
 refuses 19 of the 20 unanswerable questions but also drops 19 of the 49 good answers. The
-threshold the app uses, -6.2, sits in the gap below the lowest answerable dev question (-5.67).
+threshold the app uses, -5.8, sits in the gap below the lowest answerable dev question (-5.00).
 It refuses 7 off-topic and 1 near-domain question before any API call and costs no answerable
 one. The other near-domain questions score too high for it, so the prompt rule below has to do
 that work.

@@ -30,8 +30,13 @@ def context_prefix(doc: str, section: str, heading: str) -> str:
 
 
 def passage(chunk: dict) -> str:
-    """A chunk as search and the reranker read it."""
+    """A chunk as search reads it."""
     return context_prefix(chunk["doc"], chunk["section"], chunk["heading"]) + chunk["text"]
+
+
+def rerank_text(chunk: dict, prefix: bool = False) -> str:
+    """A chunk as the reranker reads it: without the prefix, unless asked (see RERANK_PREFIX)."""
+    return passage(chunk) if prefix else chunk["text"]
 
 
 def split_absaetze(lines: list[str]) -> list[tuple[str, list[str]]]:

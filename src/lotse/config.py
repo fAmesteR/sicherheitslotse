@@ -51,6 +51,9 @@ RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
 SMALL_RERANKER_MODEL = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 RERANK_CANDIDATES = 20
 RERANK_MAX_LENGTH = 512
+# Search reads each chunk with its context prefix, the reranker without it. On the 60
+# answerable dev questions the reranker's Recall@5 was 0.80 with the prefix and 0.83 without.
+RERANK_PREFIX = False
 
 # Documents whose text may be sent to the answer API. The ASR stay on this machine until BAuA
 # allows their use.
@@ -66,10 +69,11 @@ ANSWER_MODEL = "mistral-small-2603"  # a dated name, so the model can't change u
 ANSWER_MAX_TOKENS = 600  # several verbatim quotes don't fit in less
 ANSWER_PASSAGES = 5
 # Refuse without an API call if the best rerank score is below this. Tuned on the 80 dev questions
-# for bge-reranker-v2-m3: the middle of the gap between the lowest answerable question (-5.67) and
-# the unanswerable ones below it (-6.72 and lower). It refuses 8 of 20 unanswerable ones and no
-# answerable one. Scores depend on the reranker, so retune it whenever the reranker changes.
-REFUSAL_THRESHOLD: float | None = -6.2
+# for bge-reranker-v2-m3 reading the bare text: the middle of the gap between the lowest answerable
+# question (-5.00) and the unanswerable ones below it (-6.58 and lower). It refuses 8 of 20
+# unanswerable ones and no answerable one. Scores depend on the reranker and on what it reads, so
+# retune it whenever either changes.
+REFUSAL_THRESHOLD: float | None = -5.8
 
 # The judge is a different model from the one that answers. It has no dated name, so the result
 # file records which one ran.

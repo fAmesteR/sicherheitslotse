@@ -8,8 +8,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
 
-from lotse.chunking import passage
-from lotse.config import ANSWER_PASSAGES, API_DOCS, REFUSAL_THRESHOLD
+from lotse.chunking import rerank_text
+from lotse.config import ANSWER_PASSAGES, API_DOCS, REFUSAL_THRESHOLD, RERANK_PREFIX
 from lotse.generation import llm, prompts
 from lotse.generation.answer import NO_ANSWER, UNVERIFIED, Answer, Citation, check
 from lotse.retrieval import dense, hybrid, rerank
@@ -31,7 +31,7 @@ def retrieve(index: Index, question: str) -> Ranked:
     """The best passages with their rerank scores, best first, from API_DOCS only."""
     vector = dense.embed([question])[0]
     chunks = [index.chunks[p] for p in hybrid.search(index, question, vector, API_DOCS)]
-    scores = rerank.score(question, [passage(chunk) for chunk in chunks])
+    scores = rerank.score(question, [rerank_text(chunk, RERANK_PREFIX) for chunk in chunks])
     return sorted(zip(scores, chunks), key=lambda pair: -pair[0])[:ANSWER_PASSAGES]
 
 

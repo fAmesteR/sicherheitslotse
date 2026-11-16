@@ -2,7 +2,7 @@
 
 from lxml import etree
 
-from lotse.chunking import chunk_section, context_prefix
+from lotse.chunking import chunk_section, context_prefix, rerank_text
 from lotse.config import MAX_CHUNK_TOKENS
 from lotse.parsing.laws_xml import (
     Section,
@@ -292,3 +292,9 @@ def test_a_single_overlong_sentence_is_still_cut_to_budget():
     assert len(chunks) > 1
     assert all(word_count(c["text"]) <= MAX_CHUNK_TOKENS for c in chunks)
     assert sum(word_count(c["text"]) for c in chunks) == 900
+
+
+def test_the_reranker_reads_the_bare_text_unless_asked_for_the_prefix():
+    chunk = {"doc": "ArbZG", "section": "§ 5", "heading": "Ruhezeit", "text": "(1) Elf Stunden."}
+    assert rerank_text(chunk) == "(1) Elf Stunden."
+    assert rerank_text(chunk, prefix=True) == "ArbZG § 5 Ruhezeit: (1) Elf Stunden."

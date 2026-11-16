@@ -65,6 +65,7 @@ def ranked_passages(questions: list[dict]) -> dict[str, Ranked]:
     meta = (config.INDEX_DIR / "meta.json").read_text(encoding="utf-8")
     settings = [config.RERANKER_MODEL, config.RERANK_CANDIDATES, config.SEARCH_CANDIDATES]
     settings += [config.RRF_K, config.ANSWER_PASSAGES, sorted(config.API_DOCS)]
+    settings += [config.RERANK_PREFIX]
     version = hashlib.sha256((meta + json.dumps(settings)).encode()).hexdigest()
     cache = json.loads(CACHE.read_text(encoding="utf-8")) if CACHE.exists() else {}
     if cache.get("version") != version:

@@ -1,0 +1,228 @@
+{
+  "date": "2026-11-16",
+  "commit": "1d5997e",
+  "split": "dev",
+  "context_prefix": true,
+  "rerank_prefix": false,
+  "chunks": 1044,
+  "origins": [
+    "llm-draft"
+  ],
+  "setups": {
+    "bm25_only": {
+      "recall_at_5": 0.417,
+      "recall_interval_95": [
+        0.301,
+        0.543
+      ],
+      "mrr_at_10": 0.345,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "3/12",
+        "fact": "12/20",
+        "duties": "7/16",
+        "two_sources": "3/12"
+      }
+    },
+    "dense_only": {
+      "recall_at_5": 0.733,
+      "recall_interval_95": [
+        0.61,
+        0.829
+      ],
+      "mrr_at_10": 0.709,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "11/12",
+        "fact": "19/20",
+        "duties": "10/16",
+        "two_sources": "4/12"
+      }
+    },
+    "hybrid_rrf": {
+      "recall_at_5": 0.667,
+      "recall_interval_95": [
+        0.541,
+        0.773
+      ],
+      "mrr_at_10": 0.542,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "9/12",
+        "fact": "17/20",
+        "duties": "10/16",
+        "two_sources": "4/12"
+      }
+    },
+    "hybrid_rerank_bge": {
+      "recall_at_5": 0.833,
+      "recall_interval_95": [
+        0.72,
+        0.907
+      ],
+      "mrr_at_10": 0.741,
+      "n": 60,
+      "recall_by_type": {
+        "everyday": "11/12",
+        "fact": "18/20",
+        "duties": "13/16",
+        "two_sources": "8/12"
+      }
+    }
+  },
+  "missed": {
+    "d001": [
+      "bm25_only"
+    ],
+    "d003": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d005": [
+      "bm25_only"
+    ],
+    "d008": [
+      "bm25_only"
+    ],
+    "d014": [
+      "bm25_only"
+    ],
+    "d015": [
+      "bm25_only"
+    ],
+    "d016": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d017": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d019": [
+      "bm25_only"
+    ],
+    "d020": [
+      "bm25_only"
+    ],
+    "d021": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d022": [
+      "bm25_only"
+    ],
+    "d024": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d029": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d030": [
+      "bm25_only"
+    ],
+    "d031": [
+      "bm25_only"
+    ],
+    "d034": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d035": [
+      "bm25_only"
+    ],
+    "d037": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d040": [
+      "bm25_only"
+    ],
+    "d042": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d043": [
+      "bm25_only",
+      "hybrid_rerank_bge"
+    ],
+    "d048": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d052": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d057": [
+      "bm25_only"
+    ],
+    "d058": [
+      "bm25_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d062": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d063": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d064": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d065": [
+      "bm25_only",
+      "dense_only"
+    ],
+    "d066": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rerank_bge"
+    ],
+    "d068": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d069": [
+      "bm25_only",
+      "hybrid_rrf"
+    ],
+    "d070": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf"
+    ],
+    "d071": [
+      "bm25_only",
+      "dense_only",
+      "hybrid_rrf",
+      "hybrid_rerank_bge"
+    ],
+    "d072": [
+      "dense_only",
+      "hybrid_rrf"
+    ]
+  }
+}
