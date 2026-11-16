@@ -62,18 +62,18 @@ compares against.
 
 ### The live demo
 
-30 different dev questions asked of the live Space on 2026-11-15 and 2026-11-16, timed two ways:
+30 different dev questions asked of the live Space, timed two ways, on the current version:
 
 | | p50 | p95 |
 |---|---:|---:|
-| In the app, question in to answer out (its `/metrics`) | 1.8 s | 4.7 s |
-| For a visitor, network and queue included | 2.5 s | 8.4 s |
+| In the app, question in to answer out (its `/metrics`) | 1.8 s | 4.5 s |
+| For a visitor, network and queue included | 2.3 s | 8.2 s |
 
-With n = 30, p95 is the second-slowest question. The two slowest for a visitor, 8.4 s and 21.3 s,
-were each the first question after the Space had been idle. Without them p95 is 4.6 s. The
-Mistral API cost $0.0096 for the 30, which is **$0.32 per 1,000 queries** on this mix of 23
-answerable and 7 unanswerable questions. The GPU is paid for by the flat Hugging Face PRO plan.
-The run is in [`eval/results/2026-11-16_live.json`](eval/results/2026-11-16_live.json).
+With n = 30, p95 is the second-slowest question. The slowest for a visitor, 10.8 s, was the first
+question after a restart. The Mistral API cost $0.0102 for the 30, which is **$0.34 per 1,000
+queries** on this mix of 23 answerable and 7 unanswerable questions. The GPU is paid for by the
+flat Hugging Face PRO plan. The same 30 questions before the reranker change gave nearly the same
+times. Both runs are in [`eval/results`](eval/results), named `..._live.json`.
 
 ### Reranker speed
 
