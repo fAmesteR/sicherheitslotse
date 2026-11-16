@@ -20,7 +20,7 @@ been run.
 | Hybrid search and reranking, 1,554 chunks | done |
 | Reranker timing on CPU and ZeroGPU | done |
 | Answers with a deterministic citation check | done |
-| Refusal when the sources don't cover a question | built, score threshold not tuned yet |
+| Refusal when the sources don't cover a question | done: score threshold before the API, then the model |
 | 100 questions: 75 answerable, 25 not | drafted by an LLM, hand review still open |
 | Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
 | CI: lint, unit tests, Docker build | done |
@@ -146,7 +146,11 @@ at a quiet hour with one caller, so the live demo's median will be the real test
 trainee may work, the system answered "8 hours" from the Arbeitszeitgesetz, which doesn't apply
 to minors. In the first run 7 of 10 such questions got an answer. The citation check can't catch
 this, because the quote is real. A rerank-score threshold doesn't separate them either: a cut at 0
-refuses 19 of the 20 unanswerable questions but also drops 19 of the 49 good answers.
+refuses 19 of the 20 unanswerable questions but also drops 19 of the 49 good answers. The
+threshold the app uses, -6.2, sits in the gap below the lowest answerable dev question (-5.67).
+It refuses 7 off-topic and 1 near-domain question before any API call and costs no answerable
+one. The other near-domain questions score too high for it, so the prompt rule below has to do
+that work.
 
 What helped was one rule in the prompt: check that a source covers the same group of people, the
 same role and the same subject, or refuse. I compared two wordings, three runs each, without the

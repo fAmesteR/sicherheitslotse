@@ -65,9 +65,11 @@ SPACE_REPO = "fAmesteR/sicherheitslotse"
 ANSWER_MODEL = "mistral-small-2603"  # a dated name, so the model can't change under the evaluation
 ANSWER_MAX_TOKENS = 600  # several verbatim quotes don't fit in less
 ANSWER_PASSAGES = 5
-# Refuse without an API call if the best rerank score is below this. Not tuned yet: that needs the
-# unanswerable dev questions.
-REFUSAL_THRESHOLD: float | None = None
+# Refuse without an API call if the best rerank score is below this. Tuned on the 80 dev questions
+# for bge-reranker-v2-m3: the middle of the gap between the lowest answerable question (-5.67) and
+# the unanswerable ones below it (-6.72 and lower). It refuses 8 of 20 unanswerable ones and no
+# answerable one. Scores depend on the reranker, so retune it whenever the reranker changes.
+REFUSAL_THRESHOLD: float | None = -6.2
 
 # The judge is a different model from the one that answers. It has no dated name, so the result
 # file records which one ran.
