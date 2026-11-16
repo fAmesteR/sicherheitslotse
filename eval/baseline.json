@@ -14,11 +14,11 @@
   ],
   "answers": {
     "metrics": {
-      "citation_validity": 0.73,
-      "faithfulness": 0.891
+      "citation_validity": 0.769,
+      "faithfulness": 0.912
     },
-    "date": "2026-11-15",
-    "commit": "c22a39e",
+    "date": "2026-11-16",
+    "commit": "ffd9447",
     "split": "dev",
     "runs": 3,
     "questions": 80,
