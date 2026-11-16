@@ -32,7 +32,8 @@ INTRO = (
     "# Sicherheitslotse\n"
     "Fragen zum deutschen Arbeitsschutzrecht. Jede Antwort nennt ihre Quelle mit wörtlichem "
     "Zitat. Ein Programm prüft jedes Zitat und jede Zahl gegen den Gesetzestext, bevor die "
-    "Antwort angezeigt wird."
+    "Antwort angezeigt wird. Ob ein Satz sein Zitat richtig wiedergibt, prüft es nicht: "
+    "Vergleichen Sie ihn mit dem markierten Zitat darunter."
 )
 
 # Load everything at startup, so a missing key or a stale index stops the app here and not on a
@@ -55,8 +56,9 @@ answers = Demo(lambda question: pipeline.answer(question, retrieve(question)))
 
 
 def respond(question: str, request: gr.Request) -> str:
+    host = request.client.host if request.client else None
     forwarded = request.headers.get("x-forwarded-for", "")
-    return answers.respond(question, visitor(request.client.host, forwarded))
+    return answers.respond(question, visitor(host, forwarded))
 
 
 with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:
@@ -81,7 +83,9 @@ with gr.Blocks(title="Sicherheitslotse", analytics_enabled=False) as demo:
     gr.on([question.submit, button.click], respond, question, answer, api_name="ask")
     gr.api(answers.summary, api_name="metrics")  # latency and cost so far, as JSON
 
-demo.queue(default_concurrency_limit=1, max_size=20)  # one question at a time, twenty waiting
+# Four questions at a time, so one waiting for the API doesn't hold up the others. Search and
+# reranking still run one at a time (pipeline.retrieve). Twenty more may wait.
+demo.queue(default_concurrency_limit=4, max_size=20)
 
 # System fonts, so a visitor's browser loads nothing from Google.
 THEME = gr.themes.Default(font=["system-ui", "sans-serif"])

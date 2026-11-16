@@ -6,13 +6,14 @@ import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
 
-from lotse.config import EMBEDDING_MAX_LENGTH, EMBEDDING_MODEL
+from lotse.config import EMBEDDING_MAX_LENGTH, EMBEDDING_MODEL, MODEL_REVISIONS
 
 
 @cache
 def load():
-    tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL)
-    model = AutoModel.from_pretrained(EMBEDDING_MODEL)
+    revision = MODEL_REVISIONS[EMBEDDING_MODEL]
+    tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL, revision=revision)
+    model = AutoModel.from_pretrained(EMBEDDING_MODEL, revision=revision)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return tokenizer, model.to(device).eval()
 

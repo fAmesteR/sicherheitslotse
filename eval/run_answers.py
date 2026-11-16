@@ -34,8 +34,10 @@ RESULTS = config.ROOT / "eval" / "results"
 DETAILS = config.ROOT / "data" / "eval_answers.jsonl"  # full texts, to check the judge by hand
 CACHE = config.INDEX_DIR / "reranked.json"
 BASELINE = HERE / "baseline.json"
-# What the gate watches: do the quotes exist, and do the sentences stick to their sources?
-GATED = ("citation_validity", "faithfulness")
+# What the gate watches: do the quotes exist, do the sentences stick to their sources, and are
+# unanswerable questions refused? Near-domain refusals alone are only 10 questions, where one
+# flip is 0.1, so the gate watches all 20 unanswerable ones.
+GATED = ("citation_validity", "faithfulness", "refusal_rate")
 # Wider than for retrieval, because the model gives different replies to the same prompt.
 TOLERANCE = 0.05
 
@@ -154,8 +156,7 @@ def metrics(rows: list[dict], runs: int) -> dict:
 
 def cost(model: str) -> float:
     used = llm.USAGE.get(model, {})
-    price_in, price_out = config.PRICES[model]
-    return (used.get("prompt", 0) * price_in + used.get("completion", 0) * price_out) / 1e6
+    return llm.usd(model, used.get("prompt", 0), used.get("completion", 0))
 
 
 def gated(result: dict) -> dict:
@@ -216,7 +217,8 @@ def main() -> None:
     for row in rows:
         outcomes.setdefault(row["id"], []).append(row.get("verdict") or row["status"])
     times = sorted(row["seconds"] for row in rows)
-    git = ["git", "rev-parse", "--short", "HEAD"]
+    # "-dirty" marks a run of code with uncommitted changes, which no commit hash describes.
+    git = ["git", "describe", "--always", "--dirty", "--abbrev=7", "--exclude=*"]
     commit = subprocess.run(git, cwd=config.ROOT, capture_output=True, text=True, check=False)
     result = {
         "date": date.today().isoformat(),

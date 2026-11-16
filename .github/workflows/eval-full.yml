@@ -1,34 +1,41 @@
 name: Answer evaluation
 
 # Started by hand, because it costs API calls and over an hour of CPU time: it answers the dev
-# questions, lets the judge model grade them, and fails if citation validity or faithfulness fall
-# more than 0.05 below eval/baseline.json.
+# questions, lets the judge model grade them, and fails if citation validity, faithfulness or the
+# refusal rate fall more than 0.05 below eval/baseline.json.
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A second run started by mistake waits instead of paying for the same evaluation twice.
+concurrency:
+  group: answer-evaluation
+  cancel-in-progress: false
+
 jobs:
   answers:
     runs-on: ubuntu-latest
     timeout-minutes: 300
-    env:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       - run: uv sync --frozen --no-dev
-      - uses: actions/cache@v6.1.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/huggingface/hub
-          key: models-bge-m3-and-reranker
+          key: models-and-reranker-${{ hashFiles('src/lotse/config.py') }}
       - run: uv run --no-sync python eval/run_answers.py --gate
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
       - if: always()
-        uses: actions/upload-artifact@v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: answer-evaluation
           path: eval/results/*_answers.json

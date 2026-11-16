@@ -108,7 +108,8 @@ def main() -> None:
     for name, metrics in setups.items():
         print(f"{name:22} {json.dumps(metrics, ensure_ascii=False)}")
 
-    git = ["git", "rev-parse", "--short", "HEAD"]
+    # "-dirty" marks a run of code with uncommitted changes, which no commit hash describes.
+    git = ["git", "describe", "--always", "--dirty", "--abbrev=7", "--exclude=*"]
     commit = subprocess.run(git, cwd=ROOT, capture_output=True, text=True, check=False)
     commit = commit.stdout.strip()
     result = {

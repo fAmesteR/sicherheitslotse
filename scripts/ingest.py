@@ -1,6 +1,7 @@
 """Parse and chunk the sources into data/chunks.jsonl. --sample N prints N chunks to read."""
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -22,12 +23,15 @@ from lotse.parsing.pdf_docling import parse_pdf
 
 
 def sections_of(entry: dict) -> list[Section]:
+    """A source's sections, once its file is the one the manifest recorded."""
     doc = entry["doc"]
+    path = RAW_DIR / f"{LAWS[doc]}.zip" if doc in LAWS else PDF_DIR / f"{PDFS[doc][0]}.pdf"
+    if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
+        raise SystemExit(f"{doc}: {path} differs from data/manifest.json, run download.py again")
     if doc in LAWS:
-        return parse_law(load_root(RAW_DIR / f"{LAWS[doc]}.zip"), LAWS[doc])
+        return parse_law(load_root(path), LAWS[doc])
     stem, title, version = PDFS[doc]
-    path, cache = PDF_DIR / f"{stem}.pdf", PARSED_DIR / f"{stem}.json"
-    return parse_pdf(path, cache, doc, entry["url"], title, version)
+    return parse_pdf(path, PARSED_DIR / f"{stem}.json", doc, entry["url"], title, version)
 
 
 def main() -> None:

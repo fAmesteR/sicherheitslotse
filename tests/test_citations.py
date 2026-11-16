@@ -1,4 +1,4 @@
-from lotse.generation.answer import Answer, Citation, check, numbers, sentences
+from lotse.generation.answer import Answer, Citation, check, locate, numbers, sentences
 
 LAW = {
     "doc": "ArbZG",
@@ -80,6 +80,22 @@ def test_a_quote_must_be_word_for_word_from_its_own_passage():
         assert "steht nicht wörtlich" in rejected(text, (1, quote))
 
 
+def test_a_quote_begins_and_ends_with_whole_words():
+    chunk = dict(LAW, text="Nachtarbeit ist unzulässig, wenn der Arbeitnehmer krank ist.")
+    text = "Nachtarbeit ist zulässig [1]."
+    assert "steht nicht wörtlich" in rejected(text, (1, "zulässig, wenn der"), chunks=[chunk])
+    assert "steht nicht wörtlich" in rejected(
+        text, (1, "ist unzulässig, wenn der Arbeit"), chunks=[chunk]
+    )
+    assert check(answer(text, (1, "ist unzulässig, wenn der")), [chunk]) is None
+    # The same words again later, this time whole, are found.
+    chunk = dict(
+        LAW, text="Was unzulässig ist es nicht. Zulässig ist es, wenn nichts dagegen spricht."
+    )
+    assert locate(chunk["text"], "zulässig ist es") == (29, 44)
+    assert check(answer(text, (1, "zulässig ist es")), [chunk]) is None
+
+
 def test_a_heading_is_no_quote():
     text = "Es gibt Regeln zur Raumgröße [2]."
     assert "steht nicht wörtlich" in rejected(text, (2, "Größe der Räume"))
@@ -152,11 +168,30 @@ def test_a_number_must_come_from_a_source_its_sentence_names():
     assert check(answer("Es gelten 8 Stunden und 1,25 m² [1, 2].", *quotes), CHUNKS) is None
 
 
-def test_a_number_from_the_question_may_be_repeated():
+def test_a_number_from_the_question_is_not_backed_by_it():
+    # A leading question („Darf ich 12 Stunden …?“) must not turn its own number into a rule.
     text = "Auch bei 12 Stunden gilt die Grenze von acht Stunden [1]."
     assert "Die Zahl 12" in rejected(text, LAW_QUOTE)
-    question = "Darf ich zwölf Stunden am Stück arbeiten?"
-    assert check(answer(text, LAW_QUOTE), CHUNKS, question) is None
+
+
+def test_number_words_up_to_hundred_are_values():
+    for text, value in [
+        ("Die Ruhezeit beträgt zwanzig Stunden [1].", "20"),
+        ("Erlaubt sind fünfundzwanzig Stunden [1].", "25"),
+        ("Erlaubt sind achtzehn Stunden [1].", "18"),
+        ("Erlaubt sind hundert Stunden [1].", "100"),
+    ]:
+        assert f"Die Zahl {value} " in rejected(text, LAW_QUOTE), text
+    assert numbers("innerhalb von sechs Monaten oder vierundzwanzig Wochen") == {"6", "24"}
+
+
+def test_one_span_of_time_and_a_half_are_values():
+    assert "Die Zahl 1 " in rejected("Die Frist beträgt ein Jahr [1].", LAW_QUOTE)
+    assert "Die Zahl 0,5 " in rejected("Die Pause dauert eine halbe Stunde [1].", LAW_QUOTE)
+    assert numbers("innerhalb eines Jahres, binnen einer Woche") == {"1"}
+    # An article before a word that only begins with a span of time is no number.
+    assert numbers("bei einem Tages-Lärmexpositionspegel, ein Tagebuch, eine Stundenliste") == set()
+    assert numbers("außerhalb der Arbeitszeit, deshalb") == set()
 
 
 def test_paragraph_and_rule_numbers_come_from_the_context_prefix():

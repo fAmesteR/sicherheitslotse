@@ -40,14 +40,19 @@ class Section:
     page: int | None = None  # PDFs only: a citation can open this page
 
 
+def parse_xml(data: bytes) -> etree._Element:
+    """XML from the web, without entities, network access, comments or processing instructions."""
+    parser = etree.XMLParser(
+        resolve_entities=False, no_network=True, remove_comments=True, remove_pis=True
+    )
+    return etree.fromstring(data, parser)
+
+
 def load_root(path: Path) -> etree._Element:
     """Parse the one XML file in a law's zip, read in memory so nothing is unpacked to disk."""
     with ZipFile(path) as archive:
         name = next(n for n in archive.namelist() if n.endswith(".xml"))
-        parser = etree.XMLParser(
-            resolve_entities=False, no_network=True, remove_comments=True, remove_pis=True
-        )
-        return etree.fromstring(archive.read(name), parser)
+        return parse_xml(archive.read(name))
 
 
 def version_date(root: etree._Element) -> str:

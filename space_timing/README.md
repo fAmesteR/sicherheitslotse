@@ -8,7 +8,11 @@ preload_from_hub:
   - BAAI/bge-reranker-v2-m3
 ---
 
-Throwaway week 1 test for Sicherheitslotse: how long does `bge-reranker-v2-m3` take on ZeroGPU,
-queue included? Delete this Space once the reranker is chosen.
+Week 1 test for Sicherheitslotse: how long does `bge-reranker-v2-m3` take on ZeroGPU, queue
+included? It produced the ZeroGPU row of the reranker timing in the main README. The Space it ran on
+was later renamed and reused for the demo, so this folder is kept only as the record of how that
+number was measured. `pairs.json` comes from `scripts/time_rerank.py --export` and holds law text
+only.
 
-Select ZeroGPU in the Space settings. The README cannot set it.
+To run it again, create a Space from this folder and select ZeroGPU in its settings. The README
+cannot set it.

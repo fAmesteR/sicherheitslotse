@@ -1,4 +1,4 @@
-"""Throwaway week 1 test: rerank timing on ZeroGPU, queue included. Delete after the decision."""
+"""Week 1 test: rerank timing on ZeroGPU, queue included. See README.md."""
 
 import json
 import os

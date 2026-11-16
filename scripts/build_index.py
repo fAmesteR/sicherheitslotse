@@ -27,7 +27,7 @@ def main() -> None:
     np.save(INDEX_DIR / "embeddings.npy", embeddings)
     print(f"{embeddings.shape} embedded in {time.perf_counter() - start:.0f} s")
 
-    meta = expected_meta(INDEX_DIR / "chunks.jsonl")
+    meta = expected_meta(INDEX_DIR)
     (INDEX_DIR / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 

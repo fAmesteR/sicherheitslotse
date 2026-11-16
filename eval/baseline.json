@@ -15,7 +15,8 @@
   "answers": {
     "metrics": {
       "citation_validity": 0.769,
-      "faithfulness": 0.912
+      "faithfulness": 0.912,
+      "refusal_rate": 0.9
     },
     "date": "2026-11-16",
     "commit": "ffd9447",

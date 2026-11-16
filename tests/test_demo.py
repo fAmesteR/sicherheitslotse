@@ -1,5 +1,9 @@
+import threading
+
+from lotse.config import ANSWER_MODEL
 from lotse.demo import (
     MAX_QUESTION_CHARS,
+    OVER_BUDGET,
     TOO_LONG,
     TOO_MANY,
     Demo,
@@ -8,6 +12,7 @@ from lotse.demo import (
     render,
     visitor,
 )
+from lotse.generation import llm
 from lotse.generation.answer import NO_ANSWER, UNVERIFIED, Answer, Citation, check, locate
 from lotse.pipeline import Result
 
@@ -64,14 +69,56 @@ def test_the_limit_counts_per_visitor_and_forgets_after_the_window():
 
 def test_behind_a_proxy_the_visitor_is_the_last_public_forwarded_address():
     # The visitor wrote 1.2.3.4 into the header; the proxy appended the address it really saw.
-    assert visitor("10.0.0.5", "1.2.3.4, 93.184.216.34, 10.0.0.9") == "93.184.216.34"
-    assert visitor("10.0.0.5", "2a00:1450::1") == "2a00:1450::1"
+    forwarded = "1.2.3.4, 93.184.216.34, 10.0.0.9"
+    assert visitor("10.0.0.5", forwarded, trust_proxy=True) == "93.184.216.34"
+    assert visitor("10.0.0.5", "2a00:1450::1", trust_proxy=True) == "2a00:1450::1"
+
+
+def test_without_a_trusted_proxy_the_header_is_ignored():
+    # A client on the same network could otherwise name a new address for every question.
+    assert visitor("10.0.0.5", "1.2.3.4", trust_proxy=False) == "10.0.0.5"
 
 
 def test_a_direct_or_unknown_connection_is_taken_as_it_is():
-    assert visitor("93.184.216.34", "1.2.3.4") == "93.184.216.34"  # a header anyone can set
-    assert visitor("127.0.0.1", "") == "127.0.0.1"
-    assert visitor("10.0.0.5", "unknown, 192.168.1.2") == "10.0.0.5"
+    assert visitor("93.184.216.34", "1.2.3.4", trust_proxy=True) == "93.184.216.34"
+    assert visitor("127.0.0.1", "", trust_proxy=True) == "127.0.0.1"
+    assert visitor("10.0.0.5", "unknown, 192.168.1.2", trust_proxy=True) == "10.0.0.5"
+    assert visitor(None) == ""  # an ASGI server that doesn't know the peer
+
+
+def test_questions_asked_at_the_same_time_are_counted_without_errors():
+    # The page and the API share one Demo and call it from several threads.
+    ask, _ = counting(ANSWERED)
+    demo = Demo(ask, RateLimit(limit=3))
+    errors = []
+
+    def visit(thread: int) -> None:
+        try:
+            for n in range(60):
+                demo.answer(f"Frage {thread} {n}?", f"visitor {n % 20}")
+                demo.summary()
+        except Exception as error:  # noqa: BLE001 - any error fails the test below
+            errors.append(error)
+
+    threads = [threading.Thread(target=visit, args=(t,)) for t in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert errors == []
+    # 20 visitors, shared by all threads, may ask three times each: 60 of 480 questions pass.
+    assert demo.summary()["by_status"] == {"answered": 60, "rate_limited": 420}
+
+
+def test_the_demo_stops_asking_once_the_days_budget_is_spent():
+    def ask(question: str) -> Result:
+        llm.charge(ANSWER_MODEL, 1000, 100)  # 0.00021 USD at list prices
+        return ANSWERED
+
+    demo = Demo(ask, RateLimit(limit=100), budget=0.0005)
+    replies = [demo.answer(f"Frage {n}?", "a") for n in range(4)]
+    assert replies[:3] == [ANSWERED] * 3 and replies[3] == OVER_BUDGET
+    assert demo.summary()["by_status"] == {"answered": 3, "over_budget": 1}
 
 
 def test_the_source_is_shown_with_its_quote_marked_and_its_text_escaped():
@@ -131,4 +178,22 @@ def test_a_failure_shows_a_notice_instead_of_an_error():
 
 def test_the_footer_counts_the_documents_that_are_searched():
     text = footer()
-    assert "11 Dokumente, Stand " in text and "ArbZG" in text and "ASR" not in text
+    assert "11 Dokumente, abgerufen am " in text and "ArbZG" in text and "ASR" not in text
+
+
+def test_each_thread_meters_only_its_own_calls():
+    seen = {}
+
+    def question(name: str, tokens: int) -> None:
+        with llm.meter() as spent:
+            llm.charge(ANSWER_MODEL, tokens, 0)
+            barrier.wait()  # both meters are open at the same time
+            seen[name] = spent["prompt"]
+
+    barrier = threading.Barrier(2)
+    threads = [threading.Thread(target=question, args=(n, t)) for n, t in (("a", 10), ("b", 7))]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == {"a": 10, "b": 7}

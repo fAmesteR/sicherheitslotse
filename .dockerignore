@@ -1,7 +1,8 @@
 # Everything is left out except what the Dockerfile copies, so no key, note or source document
 # can end up in an image layer.
 *
-!requirements.txt
+!pyproject.toml
+!uv.lock
 !app/
 !src/
 !data/

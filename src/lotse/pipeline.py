@@ -4,6 +4,7 @@ uv run --env-file .env python -m lotse.pipeline "Wie lange darf ich pro Tag arbe
 """
 
 import argparse
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import cache
@@ -16,6 +17,7 @@ from lotse.retrieval import dense, hybrid, rerank
 from lotse.retrieval.index import Index, load_index
 
 Ranked = list[tuple[float, dict]]
+MODELS = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -29,9 +31,12 @@ class Result:
 
 def retrieve(index: Index, question: str) -> Ranked:
     """The best passages with their rerank scores, best first, from API_DOCS only."""
-    vector = dense.embed([question])[0]
-    chunks = [index.chunks[p] for p in hybrid.search(index, question, vector, API_DOCS)]
-    scores = rerank.score(question, [rerank_text(chunk, RERANK_PREFIX) for chunk in chunks])
+    # One question at a time: the models share one device, and a fast tokenizer fails with
+    # "Already borrowed" when two threads use it at once. The API call runs outside this.
+    with MODELS:
+        vector = dense.embed([question])[0]
+        chunks = [index.chunks[p] for p in hybrid.search(index, question, vector, API_DOCS)]
+        scores = rerank.score(question, [rerank_text(chunk, RERANK_PREFIX) for chunk in chunks])
     return sorted(zip(scores, chunks), key=lambda pair: -pair[0])[:ANSWER_PASSAGES]
 
 
@@ -50,7 +55,7 @@ def answer(
         reply = complete(messages)
         if reply and not reply.answerable:
             return Result("no_answer", NO_ANSWER, passages=passages, failures=failures)
-        reason = check(reply, passages, question) if reply else prompts.INVALID
+        reason = check(reply, passages) if reply else prompts.INVALID
         if reason is None:
             return Result("answered", reply.answer, reply.citations, passages, failures)
         failures.append(reason)

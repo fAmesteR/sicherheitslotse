@@ -10,7 +10,7 @@ import numpy as np
 from huggingface_hub import snapshot_download
 
 from lotse.chunking import passage
-from lotse.config import EMBEDDING_MODEL, INDEX_DIR, INDEX_REPO, INDEX_REVISION
+from lotse.config import EMBEDDING_MODEL, INDEX_DIR, INDEX_REPO, INDEX_REVISION, MODEL_REVISIONS
 from lotse.retrieval import bm25
 from lotse.retrieval.bm25 import TOKEN_PATTERN
 
@@ -22,11 +22,23 @@ class Index:
     bm25: bm25s.BM25
 
 
-def expected_meta(chunks_file: Path) -> dict:
+def sha256(*files: Path) -> str:
+    digest = hashlib.sha256()
+    for file in files:
+        digest.update(file.read_bytes())
+    return digest.hexdigest()
+
+
+def expected_meta(path: Path) -> dict:
+    """What meta.json must say for the index in path to be used: the settings it was built with
+    and a hash of every file, so a half-copied or mixed index stops at load."""
     return {
         "embedding_model": EMBEDDING_MODEL,
+        "embedding_revision": MODEL_REVISIONS[EMBEDDING_MODEL],
         "token_pattern": TOKEN_PATTERN,
-        "chunks_sha256": hashlib.sha256(chunks_file.read_bytes()).hexdigest(),
+        "chunks_sha256": sha256(path / "chunks.jsonl"),
+        "embeddings_sha256": sha256(path / "embeddings.npy"),
+        "bm25_sha256": {file.name: sha256(file) for file in sorted((path / "bm25").iterdir())},
     }
 
 
@@ -34,7 +46,7 @@ def load_index(path: Path = INDEX_DIR) -> Index:
     """Stops with an error if the index was built from other chunks or with other settings."""
     chunks_file = path / "chunks.jsonl"
     meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
-    for key, value in expected_meta(chunks_file).items():
+    for key, value in expected_meta(path).items():
         if meta.get(key) != value:
             raise SystemExit(f"Index mismatch on {key}: run scripts/build_index.py again")
 
@@ -56,8 +68,7 @@ def save_subset(index: Index, docs: frozenset[str], path: Path) -> None:
         file.writelines(json.dumps(chunk, ensure_ascii=False) + "\n" for chunk in chunks)
     np.save(path / "embeddings.npy", index.embeddings[keep])
     bm25.build([passage(chunk) for chunk in chunks]).save(path / "bm25", show_progress=False)
-    meta = expected_meta(path / "chunks.jsonl")
-    (path / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    (path / "meta.json").write_text(json.dumps(expected_meta(path), indent=2), encoding="utf-8")
 
 
 def fetch_index(path: Path = INDEX_DIR) -> None:

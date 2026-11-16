@@ -5,10 +5,8 @@ import json
 import urllib.request
 from datetime import date
 
-from lxml import etree
-
 from lotse.config import BAUA_ASR_URL, GII_URL, LAWS, MANIFEST, PDF_DIR, PDFS, RAW_DIR
-from lotse.parsing.laws_xml import load_root, version_date
+from lotse.parsing.laws_xml import load_root, parse_xml, version_date
 
 
 def fetch(url: str) -> bytes:
@@ -19,7 +17,7 @@ def fetch(url: str) -> bytes:
 
 def main() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    toc = etree.fromstring(fetch(f"{GII_URL}/gii-toc.xml"))
+    toc = parse_xml(fetch(f"{GII_URL}/gii-toc.xml"))
     links = {link.text.replace("http://", "https://") for link in toc.iter("link")}
 
     manifest = []

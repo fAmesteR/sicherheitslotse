@@ -6,7 +6,7 @@ from functools import cache
 
 from tokenizers import Tokenizer
 
-from lotse.config import EMBEDDING_MODEL, MAX_CHUNK_TOKENS
+from lotse.config import EMBEDDING_MODEL, MAX_CHUNK_TOKENS, MODEL_REVISIONS
 from lotse.parsing.laws_xml import Section
 
 ABSATZ = re.compile(r"\((\d+[a-z]?)\)")
@@ -17,7 +17,7 @@ Counter = Callable[[str], int]
 
 @cache
 def tokenizer() -> Tokenizer:
-    return Tokenizer.from_pretrained(EMBEDDING_MODEL)
+    return Tokenizer.from_pretrained(EMBEDDING_MODEL, revision=MODEL_REVISIONS[EMBEDDING_MODEL])
 
 
 def count_tokens(text: str) -> int:

@@ -7,15 +7,25 @@ on:
 permissions:
   contents: read
 
+# A newer push to a branch makes its older run pointless. On main every run finishes, so each
+# commit there is tested before it is deployed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   test:
+    # A pull request from a branch of this repository was tested on its push already.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     env:
-      # Read-only, for the private index dataset. Forks have no secrets and skip the gate.
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      # Only whether the secret exists. The token itself goes to the one step that needs it.
+      HAS_HF_TOKEN: ${{ secrets.HF_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
       # The test group leaves out Docling, which only the offline PDF step needs.
@@ -25,22 +35,30 @@ jobs:
       - run: uv run --no-sync pytest tests
       # The Space installs requirements.txt, so it must match the lockfile.
       - run: uv export --frozen --no-dev --no-hashes --no-emit-project --no-header | diff - requirements.txt
+      # Lints these workflows for risky triggers, unpinned actions and leaked credentials.
+      - run: uvx zizmor@1.16.3 --offline .github/workflows
 
       # The quality gate: search on the dev questions must not fall more than 0.02 below
       # eval/baseline.json in Recall@5 or MRR@10. It runs hybrid search without the reranker,
-      # which a runner's CPU would need over an hour for.
-      - if: env.HF_TOKEN != ''
-        uses: actions/cache@v6.1.0
+      # which a runner's CPU would need over an hour for. The models are pinned in config.py,
+      # so a new pin means a new cache.
+      - if: env.HAS_HF_TOKEN == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/huggingface/hub
-          key: models-bge-m3
-      - if: env.HF_TOKEN != ''
+          key: models-${{ hashFiles('src/lotse/config.py') }}
+      - if: env.HAS_HF_TOKEN == 'true'
         run: uv run --no-sync python eval/run_retrieval.py --gate
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} # read-only, for the private index dataset
 
   docker:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - run: docker build -t sicherheitslotse .
       # Without a key and the index the app can't start here. This proves that the image builds
       # and that the service can be created inside it.
@@ -49,3 +67,34 @@ jobs:
           "import sys; sys.path.insert(0, 'src');
           from lotse.demo import Demo; from lotse.service import create_app;
           print(sorted(route.path for route in create_app(Demo()).routes))"
+
+  # Pushes the demo to the Hugging Face Space once both jobs have passed on a push to main, then
+  # asks it three known questions. It needs HF_DEPLOY_TOKEN, a fine-grained token with write
+  # access to the Space alone; without it the job skips its steps. To deploy by hand, run
+  # scripts/deploy_space.py --upload --wait.
+  deploy:
+    needs: [test, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # One deploy at a time and none cancelled, so an older commit can't overwrite a newer one.
+    concurrency:
+      group: deploy-space
+      cancel-in-progress: false
+    env:
+      HAS_DEPLOY_TOKEN: ${{ secrets.HF_DEPLOY_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: env.HAS_DEPLOY_TOKEN == 'true'
+        with:
+          enable-cache: true
+      - if: env.HAS_DEPLOY_TOKEN == 'true'
+        run: uv sync --frozen --no-dev --group test
+      - if: env.HAS_DEPLOY_TOKEN == 'true'
+        run: |
+          uv run --no-sync python scripts/deploy_space.py --upload --wait
+          uv run --no-sync python eval/run_live.py --smoke
+        env:
+          HF_TOKEN: ${{ secrets.HF_DEPLOY_TOKEN }}

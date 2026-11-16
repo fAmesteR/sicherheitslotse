@@ -9,8 +9,8 @@ python_version: "3.12.12"
 app_file: app/app.py
 short_description: Arbeitsschutzrecht mit geprüften Zitaten
 preload_from_hub:
-  - BAAI/bge-m3 config.json,pytorch_model.bin,sentencepiece.bpe.model,special_tokens_map.json,tokenizer.json,tokenizer_config.json
-  - BAAI/bge-reranker-v2-m3 config.json,model.safetensors,sentencepiece.bpe.model,special_tokens_map.json,tokenizer.json,tokenizer_config.json
+  - BAAI/bge-m3 config.json,pytorch_model.bin,sentencepiece.bpe.model,special_tokens_map.json,tokenizer.json,tokenizer_config.json 5617a9f61b028005a4858fdac845db406aefb181
+  - BAAI/bge-reranker-v2-m3 config.json,model.safetensors,sentencepiece.bpe.model,special_tokens_map.json,tokenizer.json,tokenizer_config.json 953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e
 ---
 
 Fragen zum deutschen Arbeitsschutzrecht, beantwortet mit wörtlichen Zitaten aus 11 Gesetzen und

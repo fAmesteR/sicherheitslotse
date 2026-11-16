@@ -1,11 +1,13 @@
 """The answer schema, and the check that decides whether an answer is shown.
 
 The check is deterministic. It catches an invented quote or number, but it can't tell whether a real
-quote supports its sentence. The faithfulness metric measures that.
+quote supports its sentence: „darf acht Stunden nicht überschreiten“ can back „Sie müssen acht
+Stunden arbeiten [1].“ The faithfulness metric measures how often that happens, and the page shows
+each quote under the answer so a reader can compare.
 
-Known limit: "ein" and "eine" are not read as the number 1, and "Acht" in "außer Acht lassen" is
-read as 8. In a list of references such as "§§ 3, 4 und 5" only the first number is seen as a
-reference, so 4 and 5 count as values a sentence may state.
+Known limit: "ein" and "eine" count as the number 1 only before a span of time, and "Acht" in
+"außer Acht lassen" is read as 8. In a list of references such as "§§ 3, 4 und 5" only the first
+number is seen as a reference, so 4 and 5 count as values a sentence may state.
 """
 
 import re
@@ -43,10 +45,24 @@ MARKER = re.compile(r"\[(\d+(?:, ?\d+)*)\]")  # "[1]", and "[1, 2]" as some mode
 # Not glued to a letter: Unicode normalisation turns "m²" into "m2", and neither that 2 nor
 # the 2 in a name like "M1.2" is a value.
 NUMBER = re.compile(r"(?<![^\W_])(?<!\d[.,])\d+(?:[.,]\d+)*")
-# Laws write small numbers as words, so "8 Stunden" and "acht Stunden" are the same value.
-WORDS = "zwei drei vier fünf sechs sieben acht neun zehn elf zwölf"
-WORDS = {word: str(value) for value, word in enumerate(WORDS.split(), start=2)}
-NUMBER_WORD = re.compile(rf"\b(?:{'|'.join(WORDS)})\b")
+# Laws write numbers as words too, so "8 Stunden" and "acht Stunden" are the same value. A number
+# word the check can't read lets any value through, so this goes up to hundred.
+ONES = ["ein", "zwei", "drei", "vier", "fünf", "sechs", "sieben", "acht", "neun"]
+TENS = ["zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"]
+TEENS = ["dreizehn", "vierzehn", "fünfzehn", "sechzehn", "siebzehn", "achtzehn", "neunzehn"]
+WORDS = {word: value for value, word in enumerate(ONES[1:] + ["zehn", "elf", "zwölf"], start=2)}
+WORDS |= {word: value for value, word in enumerate(TEENS, start=13)}
+WORDS |= {word: 10 * tens for tens, word in enumerate(TENS, start=2)}
+WORDS |= {f"{one}und{ten}": n + WORDS[ten] for n, one in enumerate(ONES, 1) for ten in TENS}
+WORDS = {word: str(value) for word, value in WORDS.items()} | {"hundert": "100"}
+NUMBER_WORD = re.compile(rf"\b(?:{'|'.join(sorted(WORDS, key=len, reverse=True))})\b")
+# "ein" is an article, so it counts as 1 only before a span of time: „ein Jahr“, „einer Woche“.
+# „eine halbe Stunde“ is 0,5, as a law would write it.
+ONE_SPAN = re.compile(
+    r"\bein(?:e|en|em|er|es)? (?:jahr(?:e?s)?|monat(?:e?s)?|woche|tag(?:e?s)?|stunde|minute)"
+    r"(?![\w-])"  # „einem Tages-Lärmexpositionspegel“ is no day
+)
+HALF = re.compile(r"\bhalbe?[mnrs]?\b")
 # "jedes dritte Jahr" is "alle drei Jahre". Lower case only, because "Dritte" are third parties,
 # and without the eighth, because "achten" is a verb.
 ORDINALS = {"zweit": "2", "dritt": "3", "viert": "4", "fünft": "5", "sechst": "6", "siebt": "7"}
@@ -83,7 +99,9 @@ def numbers(text: str) -> set[str]:
     text = normalise(MARKER.sub(" ", text))
     found = {ORDINALS[stem] for stem in ORDINAL.findall(text)}
     text = text.lower()
-    return found | set(NUMBER.findall(text)) | {WORDS[word] for word in NUMBER_WORD.findall(text)}
+    found |= {WORDS[word] for word in NUMBER_WORD.findall(text)}
+    found |= {"1" for _ in ONE_SPAN.finditer(text)} | {"0,5" for _ in HALF.finditer(text)}
+    return found | set(NUMBER.findall(text))
 
 
 def values(text: str) -> set[str]:
@@ -98,9 +116,17 @@ def squeeze(text: str) -> str:
     return "".join(normalise(text).casefold().split())
 
 
+def whole_words(text: str, start: int, end: int) -> bool:
+    """Whether text[start:end] begins and ends at a word's edge: „zulässig“ is not in „unzulässig“."""
+    cut_before = 0 < start and text[start - 1].isalnum() and text[start].isalnum()
+    cut_after = end < len(text) and text[end - 1].isalnum() and text[end].isalnum()
+    return not (cut_before or cut_after)
+
+
 def locate(text: str, quote: str) -> tuple[int, int] | None:
-    """Where a quote sits in its passage text, as (start, end), by the same rules as the check.
-    The demo highlights that part."""
+    """Where a quote sits in its passage text, as (start, end). The check accepts a quote only if
+    this finds it, and the demo highlights that part. Spacing doesn't count inside a quote, since
+    PDFs split and join words, but a quote must begin and end with whole words."""
     quote = normalise(quote).strip(" \"'.,;:!?")
     needles = [squeeze(quote), squeeze(QUOTED_LABEL.sub(" ", quote))]
     labels = {at for match in LINE_LABEL.finditer(text) for at in range(*match.span())}
@@ -111,9 +137,13 @@ def locate(text: str, quote: str) -> tuple[int, int] | None:
                 piece = squeeze(char)
                 squeezed += piece
                 positions += [at] * len(piece)
-        for needle in needles:
-            if needle and (found := squeezed.find(needle)) >= 0:
-                return positions[found], positions[found + len(needle) - 1] + 1
+        for needle in filter(None, needles):
+            found = squeezed.find(needle)
+            while found >= 0:
+                span = positions[found], positions[found + len(needle) - 1] + 1
+                if whole_words(text, *span):
+                    return span
+                found = squeezed.find(needle, found + 1)
     return None
 
 
@@ -130,7 +160,7 @@ def sentences(text: str) -> list[str]:
     return found
 
 
-def check(answer: Answer, chunks: list[dict], question: str = "") -> str | None:
+def check(answer: Answer, chunks: list[dict]) -> str | None:
     """Why an answer can't be shown, in words the model can act on. None if every rule holds."""
     if not answer.citations:
         return "Es fehlen Zitate."
@@ -138,12 +168,9 @@ def check(answer: Answer, chunks: list[dict], question: str = "") -> str | None:
         if not 1 <= citation.source <= len(chunks):
             return f"Quelle [{citation.source}] gibt es nicht."
         quote = normalise(citation.quote).strip(" \"'.,;:!?")
-        words = QUOTED_LABEL.sub(" ", quote)
-        if len(words.split()) < 3:
+        if len(QUOTED_LABEL.sub(" ", quote).split()) < 3:
             return f"Das Zitat „{citation.quote}“ hat weniger als drei Wörter."
-        text = chunks[citation.source - 1]["text"]
-        texts = squeeze(text), squeeze(LINE_LABEL.sub(" ", text))
-        if not any(squeeze(q) in t for q in (quote, words) for t in texts):
+        if locate(chunks[citation.source - 1]["text"], citation.quote) is None:
             return (
                 f"Das Zitat „{citation.quote}“ steht nicht wörtlich im Text von Quelle "
                 f"[{citation.source}]. Kopiere einen kürzeren, zusammenhängenden Ausschnitt, ohne "
@@ -161,11 +188,12 @@ def check(answer: Answer, chunks: list[dict], question: str = "") -> str | None:
         if markers - cited:
             return f"Zu [{min(markers - cited)}] fehlt ein Zitat."
         # Every number in a sentence must stand in a source that sentence names, prefix
-        # included, or in the question, which the user wrote. A number the sentence states as
-        # a value must be a value there too, not only a paragraph label or a section number.
+        # included. A number the sentence states as a value must be a value there too, not
+        # only a paragraph label or a section number. The question doesn't count: a visitor
+        # could ask „Darf ich 14 Stunden arbeiten?“ and get „Sie dürfen 14 Stunden arbeiten [1].“
         sources = [chunks[n - 1] for n in markers]
-        named = numbers(question).union(*(numbers(passage(chunk)) for chunk in sources))
-        stated = values(question).union(
+        named = set().union(*(numbers(passage(chunk)) for chunk in sources))
+        stated = set().union(
             *(values(chunk["text"]) for chunk in sources),
             *(values(context_prefix(c["doc"], c["section"], c["heading"])) for c in sources),
         )

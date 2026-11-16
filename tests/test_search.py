@@ -55,8 +55,8 @@ def test_dense_search_ranks_by_dot_product():
     assert dense.search(embeddings, np.array([0, 1], dtype=np.float32), k=2) == [1, 2]
 
 
-def test_the_reranker_loads_once_whether_or_not_its_name_is_given(monkeypatch):
-    from lotse.config import RERANKER_MODEL
+def test_the_reranker_loads_once_at_its_pinned_commit(monkeypatch):
+    from lotse.config import MODEL_REVISIONS, RERANKER_MODEL
     from lotse.retrieval import rerank
 
     class Model:
@@ -67,13 +67,30 @@ def test_the_reranker_loads_once_whether_or_not_its_name_is_given(monkeypatch):
             return self
 
     loads = []
-    monkeypatch.setattr(rerank.AutoTokenizer, "from_pretrained", lambda name: loads.append(name))
     monkeypatch.setattr(
-        rerank.AutoModelForSequenceClassification, "from_pretrained", lambda name: Model()
+        rerank.AutoTokenizer, "from_pretrained", lambda name, revision: loads.append(revision)
+    )
+    monkeypatch.setattr(
+        rerank.AutoModelForSequenceClassification,
+        "from_pretrained",
+        lambda name, revision: Model(),
     )
     rerank.loaded.cache_clear()
     try:
         assert rerank.load() is rerank.load(RERANKER_MODEL)
-        assert loads == [RERANKER_MODEL]
+        assert loads == [MODEL_REVISIONS[RERANKER_MODEL]]
     finally:
         rerank.loaded.cache_clear()
+
+
+def test_the_space_preloads_the_pinned_model_commits():
+    from lotse.config import MODEL_REVISIONS, ROOT
+
+    readme = (ROOT / "space" / "README.md").read_text(encoding="utf-8")
+    preloaded = {
+        line.split()[1]: line.split()[3]
+        for line in readme.splitlines()
+        if line.startswith("  - ") and len(line.split()) == 4
+    }
+    assert preloaded == {name: MODEL_REVISIONS[name] for name in preloaded}
+    assert len(preloaded) == 2

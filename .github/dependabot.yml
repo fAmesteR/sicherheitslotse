@@ -1,0 +1,8 @@
+# The actions are pinned to commits, so they only change through these pull requests. Python
+# packages are left out: gradio and spaces must match what the Space's builder installs.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

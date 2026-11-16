@@ -5,7 +5,7 @@ from functools import cache
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from lotse.config import RERANK_MAX_LENGTH, RERANKER_MODEL
+from lotse.config import MODEL_REVISIONS, RERANK_MAX_LENGTH, RERANKER_MODEL
 
 
 def load(name: str = RERANKER_MODEL):
@@ -16,8 +16,9 @@ def load(name: str = RERANKER_MODEL):
 
 @cache
 def loaded(name: str):
-    tokenizer = AutoTokenizer.from_pretrained(name)
-    model = AutoModelForSequenceClassification.from_pretrained(name)
+    revision = MODEL_REVISIONS.get(name)  # pinned in config.py; another model is taken as it is
+    tokenizer = AutoTokenizer.from_pretrained(name, revision=revision)
+    model = AutoModelForSequenceClassification.from_pretrained(name, revision=revision)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return tokenizer, model.to(device).eval()
 

@@ -18,7 +18,7 @@ from pathlib import Path
 import torch
 
 from lotse.chunking import passage
-from lotse.config import CHUNKS, RERANK_CANDIDATES, RERANKER_MODEL, ROOT
+from lotse.config import API_DOCS, CHUNKS, RERANK_CANDIDATES, RERANKER_MODEL, ROOT
 from lotse.retrieval.rerank import load, score
 
 RESULTS = ROOT / "eval" / "results" / "rerank_timing.jsonl"
@@ -47,8 +47,10 @@ def milliseconds(question: str, passages: list[str], model: str) -> tuple[float,
 
 
 def timing_sets(candidates: int) -> dict:
-    """The longest chunks, plus each question with its answer first and random chunks after."""
+    """The longest chunks, plus each question with its answer first and random chunks after.
+    Only from API_DOCS, because --export writes them to a file that goes to a public Space."""
     chunks = [json.loads(line) for line in CHUNKS.open(encoding="utf-8")]
+    chunks = [chunk for chunk in chunks if chunk["doc"] in API_DOCS]
     rng = random.Random(0)
     longest = sorted(chunks, key=lambda c: len(c["text"]))[-candidates:]
     typical = []

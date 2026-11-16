@@ -7,10 +7,12 @@ import html
 import ipaddress
 import json
 import logging
+import os
 import threading
 import time
 from collections import Counter, defaultdict, deque
 from collections.abc import Callable
+from contextlib import AbstractContextManager
 from datetime import UTC, date, datetime
 
 from lotse import pipeline
@@ -23,15 +25,23 @@ from lotse.pipeline import Result
 MAX_QUESTION_CHARS = 300
 QUESTIONS_PER_WINDOW = 10
 WINDOW_SECONDS = 600
+# What the demo may spend on the API per UTC day, about 3,000 questions. A visitor who changes
+# address for every question gets past the rate limit, but not past this.
+DAILY_BUDGET_USD = 1.0
 CACHED_ANSWERS = 1000
 KEPT_QUERIES = 10_000  # for /metrics; the log lines themselves go to the server's output
 REPO_URL = "https://github.com/fAmesteR/sicherheitslotse"
+# Read X-Forwarded-For only where a proxy is known to stand in front: on a Hugging Face Space,
+# which sets SPACE_ID, or where LOTSE_TRUST_PROXY=1 says so. Set it only if the app can't be
+# reached around the proxy, since anyone who reaches it directly can write that header.
+TRUST_PROXY = os.environ.get("LOTSE_TRUST_PROXY", "1" if os.environ.get("SPACE_ID") else "0") == "1"
 
 TOO_LONG = f"Die Frage ist zu lang. Erlaubt sind höchstens {MAX_QUESTION_CHARS} Zeichen."
 TOO_MANY = (
     f"Sie haben in den letzten {WINDOW_SECONDS // 60} Minuten {QUESTIONS_PER_WINDOW} Fragen "
     "gestellt. Bitte versuchen Sie es später noch einmal."
 )
+OVER_BUDGET = "Das Tagesbudget der Demo ist aufgebraucht. Bitte versuchen Sie es morgen wieder."
 FAILED = "Die Frage konnte gerade nicht beantwortet werden. Bitte versuchen Sie es später erneut."
 HINTS = {
     "no_answer": "Durchsucht werden nur die unten genannten Gesetze und Verordnungen.",
@@ -57,19 +67,22 @@ class RateLimit:
     ):
         self.limit, self.window, self.clock = limit, window, clock
         self.asked: dict[str, deque[float]] = defaultdict(deque)
+        self.lock = threading.Lock()  # the page and the API ask from several threads
 
     def allow(self, visitor: str) -> bool:
-        now = self.clock()
-        # Forget visitors whose last question is older than the window, so the table stays small.
-        for gone in [v for v, times in self.asked.items() if now - times[-1] > self.window]:
-            del self.asked[gone]
-        times = self.asked[visitor]
-        while times and now - times[0] > self.window:
-            times.popleft()
-        if len(times) >= self.limit:
-            return False
-        times.append(now)
-        return True
+        with self.lock:
+            now = self.clock()
+            # Forget visitors whose last question is older than the window, so the table stays
+            # small.
+            for gone in [v for v, times in self.asked.items() if now - times[-1] > self.window]:
+                del self.asked[gone]
+            times = self.asked[visitor]
+            while times and now - times[0] > self.window:
+                times.popleft()
+            if len(times) >= self.limit:
+                return False
+            times.append(now)
+            return True
 
 
 def public(address: str) -> bool:
@@ -79,19 +92,22 @@ def public(address: str) -> bool:
         return False
 
 
-def visitor(host: str, forwarded: str = "") -> str:
+def visitor(host: str | None, forwarded: str = "", trust_proxy: bool | None = None) -> str:
     """Who asks, for the rate limit. Behind a proxy, as on Hugging Face, the connection comes from
     the proxy's private address and the visitor's is in X-Forwarded-For. Each proxy appends the
     address it saw, so read from the right and take the first public one: anything a visitor wrote
-    there stands further left. A direct connection's header is ignored, since anyone can set it."""
+    there stands further left. A direct connection's header is ignored, since anyone can set it,
+    and so is every header unless a proxy is trusted (see TRUST_PROXY)."""
     global warned
+    host = host or ""  # an ASGI server may not know the peer
     if public(host):
         return host
-    for hop in reversed(forwarded.split(",")):
-        if public(hop := hop.strip()):
-            return hop
+    if TRUST_PROXY if trust_proxy is None else trust_proxy:
+        for hop in reversed(forwarded.split(",")):
+            if public(hop := hop.strip()):
+                return hop
     if not warned:
-        log.warning("No public visitor address: everyone from %s shares one rate limit.", host)
+        log.warning("No public visitor address: everyone from %r shares one rate limit.", host)
         warned = True
     return host
 
@@ -145,16 +161,19 @@ class Demo:
         self,
         ask: Callable[[str], Result] = pipeline.ask,
         limit: RateLimit | None = None,
-        totals: Callable[[], tuple[int, int, float]] = llm.totals,
+        meter: Callable[[], AbstractContextManager[Counter]] = llm.meter,
         clock: Callable[[], float] = time.perf_counter,
+        budget: float = DAILY_BUDGET_USD,
     ):
-        self.ask, self.totals, self.clock = ask, totals, clock
+        self.ask, self.meter, self.clock, self.budget = ask, meter, clock, budget
         self.limit = limit or RateLimit()
         self.answers: dict[str, Result] = {}
         self.queries: deque[dict] = deque(maxlen=KEPT_QUERIES)
-        # One question at a time: the models share one device, and a query's cost is the
-        # difference between the token totals before and after it.
-        self.lock = threading.Lock()
+        self.spent = ("", 0.0)  # UTC day and USD spent on it
+        # Questions run at the same time, so the cache, the query log and the spending are
+        # guarded. The question itself runs outside: pipeline.retrieve guards the models, and
+        # each question's cost comes from its own meter.
+        self.guard = threading.Lock()
 
     def answer(self, question: str, visitor: str) -> Result | str:
         """The checked result, or a notice if the question never reached the pipeline."""
@@ -164,27 +183,40 @@ class Demo:
         if len(question) > MAX_QUESTION_CHARS:
             return TOO_LONG
         key = question.casefold()
-        if key in self.answers:  # costs nothing, so it doesn't count against the limit
-            self.record(self.answers[key].status, cached=True)
-            return self.answers[key]
+        with self.guard:
+            cached = self.answers.get(key)
+        if cached:  # costs nothing, so it doesn't count against the limit
+            self.record(cached.status, cached=True)
+            return cached
         if not self.limit.allow(visitor):
             self.record("rate_limited")
             return TOO_MANY
-        with self.lock:
-            start, before = self.clock(), self.totals()
+        if self.over_budget():
+            self.record("over_budget")
+            return OVER_BUDGET
+        start = self.clock()
+        with self.meter() as spent:
             try:
                 result = self.ask(question)
             except Exception:
                 log.exception("A question failed")  # the question itself is not logged
-                self.record("failed", seconds=self.clock() - start)
-                return FAILED
-            prompt, completion, usd = (now - old for now, old in zip(self.totals(), before))
-            self.record(result.status, self.clock() - start, prompt, completion, usd)
+                result = None
+        cost = spent["prompt"], spent["completion"], spent["usd"]
+        if result is None:  # a first call may have been paid before the second one failed
+            self.record("failed", self.clock() - start, *cost)
+            return FAILED
+        self.record(result.status, self.clock() - start, *cost)
         if result.status != "unverified":  # the model may pass on a second try, so don't keep it
-            if len(self.answers) >= CACHED_ANSWERS:
-                del self.answers[next(iter(self.answers))]  # the oldest one
-            self.answers[key] = result
+            with self.guard:
+                if key not in self.answers and len(self.answers) >= CACHED_ANSWERS:
+                    del self.answers[next(iter(self.answers))]  # the oldest one
+                self.answers[key] = result
         return result
+
+    def over_budget(self) -> bool:
+        today = datetime.now(UTC).date().isoformat()
+        with self.guard:
+            return self.spent[0] == today and self.spent[1] >= self.budget
 
     def respond(self, question: str, visitor: str) -> str:
         """The same as HTML, for the page."""
@@ -213,17 +245,22 @@ class Demo:
             "completion_tokens": completion,
             "usd": round(usd, 6),
         }
-        self.queries.append(entry)
+        with self.guard:
+            self.queries.append(entry)
+            day = entry["time"][:10]
+            self.spent = (day, (self.spent[1] if self.spent[0] == day else 0.0) + usd)
         query_log.info(json.dumps(entry))
 
     def summary(self) -> dict:
         """Latency and cost since the start, over at most the last KEPT_QUERIES queries."""
-        served = [q for q in self.queries if q["status"] in ("answered", "no_answer", "unverified")]
+        with self.guard:
+            queries = list(self.queries)
+        served = [q for q in queries if q["status"] in ("answered", "no_answer", "unverified")]
         fresh = sorted(q["seconds"] for q in served if not q["cached"])
-        usd = sum(q["usd"] for q in self.queries)
+        usd = sum(q["usd"] for q in queries)
         return {
-            "queries": len(self.queries),
-            "by_status": dict(Counter(q["status"] for q in self.queries)),
+            "queries": len(queries),
+            "by_status": dict(Counter(q["status"] for q in queries)),
             "from_cache": sum(q["cached"] for q in served),
             # Latency of the queries that ran the pipeline. A cached answer takes no time.
             "p50_seconds": percentile(fresh, 0.50),
@@ -243,7 +280,8 @@ def footer() -> str:
     return (
         "**Keine Rechtsberatung.** Sicherheitslotse ist ein Studienprojekt. Antworten können "
         "falsch oder unvollständig sein. Maßgeblich ist der verlinkte Originaltext.\n\n"
-        f"**{len(docs)} Dokumente, Stand {loaded}:** {names}. "
+        # Each source shows its own version date; this is when the texts were downloaded.
+        f"**{len(docs)} Dokumente, abgerufen am {loaded}:** {names}. "
         "Quelle der Texte: gesetze-im-internet.de.\n\n"
         "**Datenschutz:** Ihre Frage und die gefundenen Textstellen gehen zur Beantwortung an die "
         "API von Mistral AI. Bitte geben Sie keine personenbezogenen Daten ein.\n\n"
