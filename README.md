@@ -6,29 +6,81 @@ Beantwortet Fragen zum deutschen Arbeitsschutz, mit exakten Quellenangaben und g
 
 Answers questions about German occupational-safety rules, with exact citations and measured quality.
 
-**Status: in development.** Search, cited answers, the evaluation, a quality gate in CI, a web
-service with an API and a Docker image are built. The numbers below are a first reading: the 100
-questions were drafted by an LLM and not yet reviewed by hand, and the 20 test questions have not
-been run.
+![An everyday question, the checked answer with its quotes highlighted, and the original law](docs/demo.gif)
 
-**Live demo: [huggingface.co/spaces/fAmesteR/sicherheitslotse](https://huggingface.co/spaces/fAmesteR/sicherheitslotse)**, on the 11 laws.
+**Live demo: [huggingface.co/spaces/fAmesteR/sicherheitslotse](https://huggingface.co/spaces/fAmesteR/sicherheitslotse)**, on the 11 laws. The Space sleeps
+when nobody uses it, and the first visitor after that waits a minute or two while it starts.
 
-| Part | State |
-|---|---|
-| 11 laws and ordinances, parsed from XML | done |
-| 5 of the 14 technical rules, parsed from PDF | done |
-| Hybrid search and reranking, 1,554 chunks | done |
-| Reranker timing on CPU and ZeroGPU | done |
-| Answers with a deterministic citation check | done |
-| Refusal when the sources don't cover a question | done: score threshold before the API, then the model |
-| 100 questions: 75 answerable, 25 not | drafted by an LLM, hand review still open |
-| Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
-| CI: lint, unit tests, Docker build | done |
-| Quality gate in CI on Recall@5 and MRR@10 | built, switched on once the index is uploaded |
-| Gradio demo and JSON API (FastAPI) on the 11 laws | done |
-| Latency and cost logged for every query | done |
-| Docker image | builds in CI |
-| Public deployment | live on a Hugging Face Space with ZeroGPU |
+**Status: in development.** The numbers below are a first reading: the 100 questions were
+drafted by an LLM and not yet reviewed by hand, and the 20 test questions have not been run.
+
+## Measurements
+
+### Quality on the dev questions
+
+80 of the 100 questions form the dev split: 60 that the 11 laws answer and 20 that they don't.
+An LLM drafted all of them, and a script checked every source label and key fact against the law
+text. They are not reviewed by hand yet, so read these numbers as a first reading. Search ran on
+the laws-only index of 1,044 chunks, the one the public demo uses.
+
+| Search setup | Recall@5 | MRR@10 |
+|---|---|---|
+| BM25 only | 0.42 | 0.35 |
+| Dense only (bge-m3) | 0.73 | 0.71 |
+| Hybrid (RRF) | 0.67 | 0.54 |
+| Hybrid + `bge-reranker-v2-m3` (the demo's setup) | 0.80 | 0.73 |
+| Hybrid + `mmarco-mMiniLMv2-L12-H384-v1` | 0.78 | 0.66 |
+
+n = 60. The 95% interval for 0.80 is 0.68 to 0.88.
+
+| Answers, mean of three runs | Value | 95% interval | Out of, per run |
+|---|---|---|---|
+| Answer rate | 0.75 | 0.63 to 0.84 | 60 answerable questions |
+| Citation validity: first replies that pass the check | 0.73 | 0.60 to 0.83 | about 59 replies |
+| Correctness: judged correct against the reference, "partly" counts as not correct | 0.79 | 0.66 to 0.89 | about 44 shown answers |
+| Faithfulness: sentences the judge finds supported by their source | 0.89 | 0.81 to 0.95 | about 76 sentences |
+| Refusal, off-topic questions | 10 of 10 in every run | | |
+| Refusal, near-domain questions | 7 of 10 in every run | | |
+| API time per answer, p50 and p95 | 1.3 s and 3.5 s | | |
+| API cost per answer | $0.00039 | | |
+
+The intervals use the per-run n, so they don't pretend three runs are three times the questions.
+The runs agree closely: answer rate 0.77, 0.72 and 0.77. Mistral Small writes the answers and
+Mistral Large judges them. In 2 of the 135 shown answers the judge returned no valid verdict, both
+for one question, and correctness leaves those out. I haven't yet checked the judge's verdicts
+against my own. Every run is in
+[`eval/results`](eval/results), and [`eval/baseline.json`](eval/baseline.json) holds what CI
+compares against.
+
+### The live demo
+
+30 different dev questions asked of the live Space on 2026-11-15 and 2026-11-16, timed two ways:
+
+| | p50 | p95 |
+|---|---:|---:|
+| In the app, question in to answer out (its `/metrics`) | 1.8 s | 4.7 s |
+| For a visitor, network and queue included | 2.5 s | 8.4 s |
+
+With n = 30, p95 is the second-slowest question. The two slowest for a visitor, 8.4 s and 21.3 s,
+were each the first question after the Space had been idle. Without them p95 is 4.6 s. The
+Mistral API cost $0.0096 for the 30, which is **$0.32 per 1,000 queries** on this mix of 23
+answerable and 7 unanswerable questions. The GPU is paid for by the flat Hugging Face PRO plan.
+The run is in [`eval/results/2026-11-16_live.json`](eval/results/2026-11-16_live.json).
+
+### Reranker speed
+
+Median time to rerank 20 passages, over 8 questions:
+
+| Model | Hardware | Median |
+|---|---|---:|
+| `bge-reranker-v2-m3` | ZeroGPU, queue included | 0.36 s |
+| `bge-reranker-v2-m3` | 12 CPU threads | 25.8 s |
+| `bge-reranker-v2-m3` | 2 CPU threads | 59.9 s |
+| `mmarco-mMiniLMv2-L12-H384-v1` | 2 CPU threads | 2.5 s |
+
+The better model only works on a GPU, so the small one stays as the fallback. The ZeroGPU runs were
+at a quiet hour with one caller, so the live demo's median will be the real test. Every run is in
+[`eval/results/rerank_timing.jsonl`](eval/results/rerank_timing.jsonl).
 
 ## How it works
 
@@ -73,72 +125,6 @@ flowchart LR
 
 The check catches an invented quote or number. It can't tell whether a real quote supports its
 sentence, so an LLM judge measures that separately as faithfulness.
-
-## Measurements
-
-### Quality on the dev questions
-
-80 of the 100 questions form the dev split: 60 that the 11 laws answer and 20 that they don't.
-An LLM drafted all of them, and a script checked every source label and key fact against the law
-text. They are not reviewed by hand yet, so read these numbers as a first reading. Search ran on
-the laws-only index of 1,044 chunks, the one the public demo will use.
-
-| Search setup | Recall@5 | MRR@10 |
-|---|---|---|
-| BM25 only | 0.42 | 0.35 |
-| Dense only (bge-m3) | 0.73 | 0.71 |
-| Hybrid (RRF) | 0.67 | 0.54 |
-| Hybrid + `bge-reranker-v2-m3` (the demo's setup) | 0.80 | 0.73 |
-| Hybrid + `mmarco-mMiniLMv2-L12-H384-v1` | 0.78 | 0.66 |
-
-n = 60. The 95% interval for 0.80 is 0.68 to 0.88.
-
-| Answers, mean of three runs | Value | 95% interval | Out of, per run |
-|---|---|---|---|
-| Answer rate | 0.75 | 0.63 to 0.84 | 60 answerable questions |
-| Citation validity: first replies that pass the check | 0.73 | 0.60 to 0.83 | about 59 replies |
-| Correctness: judged correct against the reference, "partly" counts as not correct | 0.79 | 0.66 to 0.89 | about 44 shown answers |
-| Faithfulness: sentences the judge finds supported by their source | 0.89 | 0.81 to 0.95 | about 76 sentences |
-| Refusal, off-topic questions | 10 of 10 in every run | | |
-| Refusal, near-domain questions | 7 of 10 in every run | | |
-| API time per answer, p50 and p95 | 1.3 s and 3.5 s | | |
-| API cost per answer | $0.00039 | | |
-
-The intervals use the per-run n, so they don't pretend three runs are three times the questions.
-The runs agree closely: answer rate 0.77, 0.72 and 0.77. Mistral Small writes the answers and
-Mistral Large judges them. Every run is in
-[`eval/results`](eval/results), and [`eval/baseline.json`](eval/baseline.json) holds what CI
-compares against.
-
-### The live demo
-
-30 different dev questions asked of the live Space on 2026-11-15 and 2026-11-16, timed two ways:
-
-| | p50 | p95 |
-|---|---:|---:|
-| In the app, question in to answer out (its `/metrics`) | 1.8 s | 4.7 s |
-| For a visitor, network and queue included | 2.5 s | 8.4 s |
-
-With n = 30, p95 is the second-slowest question. The two slowest for a visitor, 8.4 s and 21.3 s,
-were each the first question after the Space had been idle. Without them p95 is 4.6 s. The
-Mistral API cost $0.0096 for the 30, which is **$0.32 per 1,000 queries** on this mix of 23
-answerable and 7 unanswerable questions. The GPU is paid for by the flat Hugging Face PRO plan.
-The run is in [`eval/results/2026-11-16_live.json`](eval/results/2026-11-16_live.json).
-
-### Reranker speed
-
-Median time to rerank 20 passages, over 8 questions:
-
-| Model | Hardware | Median |
-|---|---|---:|
-| `bge-reranker-v2-m3` | ZeroGPU, queue included | 0.36 s |
-| `bge-reranker-v2-m3` | 12 CPU threads | 25.8 s |
-| `bge-reranker-v2-m3` | 2 CPU threads | 59.9 s |
-| `mmarco-mMiniLMv2-L12-H384-v1` | 2 CPU threads | 2.5 s |
-
-The better model only works on a GPU, so the small one stays as the fallback. The ZeroGPU runs were
-at a quiet hour with one caller, so the live demo's median will be the real test. Every run is in
-[`eval/results/rerank_timing.jsonl`](eval/results/rerank_timing.jsonl).
 
 ## What didn't work
 
@@ -200,6 +186,17 @@ the page, and the whole block looked like a footer. The filter now cuts the foot
 rest.
 
 ## Run it
+
+With [uv](https://docs.astral.sh/uv/) and a Mistral API key in `.env` as `MISTRAL_API_KEY=...`,
+three commands build the index of the 11 laws and open the demo at `http://localhost:7860`:
+
+```bash
+uv sync
+uv run python scripts/download.py && uv run python scripts/ingest.py && uv run python scripts/build_index.py
+uv run --env-file .env python app/app.py
+```
+
+The details:
 
 The tests need no data:
 
@@ -283,7 +280,10 @@ uv run python scripts/deploy_space.py --upload
 
 The first writes an index of the 11 laws alone, 1,044 of the 1,554 chunks, and uploads it to a
 private dataset. The second pushes the app, the package, `requirements.txt` and
-[`space/README.md`](space/README.md) to the Space. It takes only files that git tracks. The Space
+[`space/README.md`](space/README.md) to the Space. It takes only files that git tracks. After an
+upload, set the commit it prints as `INDEX_REVISION` in `lotse.config`, so the app and CI read the
+same index. [`deploy-space.yml`](.github/workflows/deploy-space.yml) runs the second script after
+CI passes on `main`, with a write token for the Space alone as the `HF_DEPLOY_TOKEN` secret. The Space
 downloads the index at startup and runs embedding and reranking in one ZeroGPU function, so a
 visitor's GPU quota pays for model time only.
 
@@ -325,6 +325,25 @@ uv run python scripts/check_pdfs.py
 
 It compares the PDF's own text layer with the final sections. Figure captions, drawing labels and
 Literaturhinweise are meant to be missing. Anything else is a parsing bug.
+
+## Status
+
+| Part | State |
+|---|---|
+| 11 laws and ordinances, parsed from XML | done |
+| 5 of the 14 technical rules, parsed from PDF | done; the other 9 wait for BAuA, whose site blocks scripts |
+| Hybrid search and reranking, 1,554 chunks | done |
+| Reranker timing on CPU and ZeroGPU | done |
+| Answers with a deterministic citation check | done |
+| Refusal when the sources don't cover a question | done: score threshold before the API, then the model |
+| 100 questions: 75 answerable, 25 not | drafted by an LLM, hand review still open |
+| Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
+| CI: lint, unit tests, Docker build | done |
+| Quality gate in CI on Recall@5 and MRR@10 | built and passing; runs in CI once the `HF_TOKEN` secret is set |
+| Gradio demo and JSON API (FastAPI) on the 11 laws | done |
+| Latency and cost logged for every query | done |
+| Docker image | builds in CI |
+| Public deployment | live on a Hugging Face Space with ZeroGPU; `deploy-space.yml` redeploys after CI passes on `main` |
 
 ## Data sources and licensing
 

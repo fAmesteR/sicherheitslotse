@@ -27,10 +27,21 @@ RERANKERS = {"bge": RERANKER_MODEL, "small": SMALL_RERANKER_MODEL}
 Ranker = Callable[[Index, dict], list[int]]
 
 
-def reranked(model: str) -> Ranker:
+def bare(chunk: dict) -> str:
+    """A chunk without its context prefix, for measuring what the prefix is worth."""
+    return chunk["text"]
+
+
+def without_prefix(index: Index) -> Index:
+    """The same chunks searched without "ArbSchG § 5 ...:" in front. Embedding takes a while."""
+    texts = [bare(chunk) for chunk in index.chunks]
+    return Index(index.chunks, dense.embed(texts), bm25.build(texts))
+
+
+def reranked(model: str, text: Callable[[dict], str] = passage) -> Ranker:
     def rank(index: Index, question: dict) -> list[int]:
         positions = hybrid.search(index, question["question"], question["vector"])
-        passages = [passage(index.chunks[p]) for p in positions]
+        passages = [text(index.chunks[p]) for p in positions]
         scores = score(question["question"], passages, model)
         return [p for _, p in sorted(zip(scores, positions), key=lambda pair: -pair[0])]
 
@@ -64,12 +75,15 @@ def main() -> None:
     parser.add_argument("--rerankers", nargs="*", default=[], choices=sorted(RERANKERS))
     parser.add_argument("--gate", action="store_true", help="fail if below eval/baseline.json")
     parser.add_argument("--save-baseline", action="store_true", help="store this run as it")
+    parser.add_argument("--no-prefix", action="store_true", help="search the bare chunk text")
     args = parser.parse_args()
+    if args.no_prefix and (args.gate or args.save_baseline):
+        parser.error("--no-prefix is a comparison, not the setup the gate checks")
 
     questions = [json.loads(line) for line in QUESTIONS.open(encoding="utf-8")]
     questions = [q for q in questions if q["split"] == args.split and q["answerable"]]
     fetch_index()  # a download in CI, nothing on a machine that has the index
-    index = load_index()
+    index = without_prefix(load_index()) if args.no_prefix else load_index()
     vectors = dense.embed([q["question"] for q in questions])
     for question, vector in zip(questions, vectors):
         question["vector"] = vector
@@ -85,7 +99,7 @@ def main() -> None:
 
     rankers: list[Ranker] = [bm25_only, dense_only, hybrid_rrf]
     for name in args.rerankers:
-        rankers.append(reranked(RERANKERS[name]))
+        rankers.append(reranked(RERANKERS[name], bare if args.no_prefix else passage))
         rankers[-1].__name__ = f"hybrid_rerank_{name}"
 
     setups = {ranker.__name__: evaluate(index, questions, ranker) for ranker in rankers}
@@ -99,12 +113,14 @@ def main() -> None:
         "date": date.today().isoformat(),
         "commit": commit or "uncommitted",
         "split": args.split,
+        "context_prefix": not args.no_prefix,
         "chunks": len(index.chunks),
         "origins": sorted({q["origin"] for q in questions}),
         "setups": setups,
         "missed": {q["id"]: q["missed_by"] for q in questions if "missed_by" in q},
     }
-    path = RESULTS / f"{result['date']}_{result['commit']}.json"
+    suffix = "_no_prefix" if args.no_prefix else ""
+    path = RESULTS / f"{result['date']}_{result['commit']}{suffix}.json"
     path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Saved {path.relative_to(ROOT)}")
 
