@@ -1,0 +1,231 @@
+{
+  "date": "2026-11-17",
+  "space": "fAmesteR/sicherheitslotse",
+  "commit": "d44fc6d",
+  "split": "dev",
+  "note": "seconds per row are timed by this client, network and queue included; metrics are the Space's /metrics after the questions",
+  "metrics": {
+    "queries": 30,
+    "by_status": {
+      "answered": 21,
+      "no_answer": 9
+    },
+    "from_cache": 0,
+    "p50_seconds": 1.979,
+    "p95_seconds": 3.67,
+    "usd_total": 0.009405,
+    "usd_per_1000_queries": 0.3135
+  },
+  "rows": [
+    {
+      "id": "d081",
+      "type": "not_answerable",
+      "seconds": 9.44,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d001",
+      "type": "everyday",
+      "seconds": 2.52,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d053",
+      "type": "duties",
+      "seconds": 4.18,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d039",
+      "type": "fact",
+      "seconds": 2.5,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d098",
+      "type": "not_answerable",
+      "seconds": 1.32,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d078",
+      "type": "not_answerable",
+      "seconds": 1.91,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d036",
+      "type": "fact",
+      "seconds": 2.93,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d048",
+      "type": "duties",
+      "seconds": 2.79,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d021",
+      "type": "duties",
+      "seconds": 2.64,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d061",
+      "type": "two_sources",
+      "seconds": 3.06,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d032",
+      "type": "duties",
+      "seconds": 4.56,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d076",
+      "type": "not_answerable",
+      "seconds": 1.28,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d040",
+      "type": "fact",
+      "seconds": 4.22,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d079",
+      "type": "not_answerable",
+      "seconds": 2.28,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d093",
+      "type": "not_answerable",
+      "seconds": 1.53,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d049",
+      "type": "duties",
+      "seconds": 2.69,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d027",
+      "type": "fact",
+      "seconds": 1.56,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d091",
+      "type": "not_answerable",
+      "seconds": 1.5,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d014",
+      "type": "duties",
+      "seconds": 3.24,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d017",
+      "type": "duties",
+      "seconds": 3.09,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d037",
+      "type": "fact",
+      "seconds": 3.24,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d029",
+      "type": "everyday",
+      "seconds": 2.06,
+      "status": "no_answer",
+      "error": null
+    },
+    {
+      "id": "d020",
+      "type": "everyday",
+      "seconds": 1.87,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d041",
+      "type": "fact",
+      "seconds": 2.06,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d062",
+      "type": "two_sources",
+      "seconds": 3.0,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d002",
+      "type": "fact",
+      "seconds": 2.2,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d052",
+      "type": "duties",
+      "seconds": 2.41,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d057",
+      "type": "everyday",
+      "seconds": 2.71,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d030",
+      "type": "fact",
+      "seconds": 2.98,
+      "status": "answered",
+      "error": null
+    },
+    {
+      "id": "d022",
+      "type": "everyday",
+      "seconds": 2.61,
+      "status": "no_answer",
+      "error": null
+    }
+  ]
+}
