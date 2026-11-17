@@ -19,6 +19,7 @@ from lotse.config import ROOT, SPACE_REPO
 
 PARTS = ["app", "src", "data/manifest.json", "requirements.txt"]
 FAILED_STAGES = {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR", "NO_APP_FILE", "PAUSED"}
+STARTING_STAGES = {"BUILDING", "RUNNING_BUILDING", "APP_STARTING", "RUNNING_APP_STARTING"}
 
 
 def git(*args: str) -> bytes:
@@ -38,17 +39,21 @@ def stage(target: Path) -> list[str]:
 
 def wait_until_running(api: HfApi, commit: str, limit: float = 1800) -> None:
     """Until the Space runs this commit. Stops with an error if its build or start fails."""
-    start, last = time.monotonic(), None
+    start, last, started = time.monotonic(), None, False
     while time.monotonic() - start < limit:
         runtime = api.get_space_runtime(SPACE_REPO)
         current = runtime.raw.get("sha") == commit
+        started = started or runtime.stage in STARTING_STAGES
         if (runtime.stage, current) != last:
             print(f"{time.monotonic() - start:5.0f} s  {runtime.stage}  this commit: {current}")
             last = runtime.stage, current
         if current and runtime.stage == "RUNNING":
             return
-        if current and runtime.stage in FAILED_STAGES:
-            raise SystemExit(f"The Space stopped at {runtime.stage}: see its logs")
+        # A Space that failed reports no commit, so a failure after the upload's build began is
+        # this commit's. One seen before that may still be left from an earlier deploy.
+        if (current or started) and runtime.stage in FAILED_STAGES:
+            message = runtime.raw.get("errorMessage") or "see its logs"
+            raise SystemExit(f"The Space stopped at {runtime.stage}: {message}")
         time.sleep(15)
     raise SystemExit(f"The Space didn't run {commit[:7]} within {limit / 60:.0f} minutes")
 
