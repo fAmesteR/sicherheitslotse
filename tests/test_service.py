@@ -136,3 +136,13 @@ def test_the_image_installs_the_locked_torch_version():
     locked = re.search(r'^name = "torch"\nversion = "([^"]+)"', lock, re.MULTILINE)[1]
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert re.findall(r"torch==([\w.]+)\+cpu --hash=sha256:[0-9a-f]{64}", dockerfile) == [locked]
+
+
+def test_ci_uses_the_same_uv_as_the_image():
+    """A newer uv may export the same lock differently, so every workflow pins the image's uv."""
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    image = re.search(r"astral-sh/uv:([\d.]+)@", dockerfile)[1]
+    for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = workflow.read_text(encoding="utf-8")
+        steps = text.count("astral-sh/setup-uv@")
+        assert text.count(f'version: "{image}"') == steps, workflow.name
