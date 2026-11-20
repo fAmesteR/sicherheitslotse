@@ -220,6 +220,13 @@ a source independent of Docling, line by line: 2,330 lines across the five files
 the page, and the whole block looked like a footer. The filter now cuts the footer out and keeps the
 rest.
 
+**CI failed with nothing changed in the repository.** The workflows pinned the `setup-uv` action
+by commit, but the action installed the newest uv. uv 0.13.9 came out one morning and wrote the
+same lockfile into `requirements.txt` with its platform conditions in an equivalent but different
+form, so the check that the two match failed. The packages were identical. Every workflow now
+installs uv 0.13.6, the version the Docker image uses, and a test keeps the two equal. Pinning the
+action wasn't enough: what it installs needed a pin too.
+
 ## Run it
 
 With [uv](https://docs.astral.sh/uv/) and a Mistral API key in `.env` as `MISTRAL_API_KEY=...`,
@@ -252,8 +259,8 @@ uv run python eval/run_retrieval.py
 ```
 
 `run_retrieval.py --gate` is the quality gate: it exits with an error if Recall@5 or MRR@10 of
-hybrid search falls more than 0.02 below `eval/baseline.json`. CI runs it on every push once the
-index token is set. `--save-baseline` stores a new baseline, which is its own commit.
+hybrid search falls more than 0.02 below `eval/baseline.json`. CI runs it on every push, on the
+pinned index downloaded fresh. `--save-baseline` stores a new baseline, which is its own commit.
 
 `build_index.py` takes about 10 minutes on a laptop CPU. `run_retrieval.py --rerankers bge small`
 also scores the reranked setups, which takes about 15 minutes on a CPU.
@@ -329,11 +336,13 @@ The first writes an index of the 11 laws alone, 1,044 of the 1,554 chunks, and u
 private dataset. After an upload, set the commit it prints as `INDEX_REVISION` in `lotse.config`,
 so the app and CI read the same index. The second pushes the app, the package, `requirements.txt`
 and [`space/README.md`](space/README.md) to the Space, as they are in the last commit, so a change
-that isn't committed never ships. `--wait` returns once the Space runs that commit. The third asks
-the live Space three known questions and fails unless two are answered with a source and one is
-refused. The `deploy` job in [`ci.yml`](.github/workflows/ci.yml) runs the last two after the
-tests and the Docker build pass on `main`, with a write token for the Space alone as the
-`HF_DEPLOY_TOKEN` secret. The Space downloads the index at startup and runs embedding and
+that isn't committed never ships. `--wait` returns once the Space runs that commit, and stops with
+the Space's own error message as soon as its build or start fails. The third asks the live Space
+three known questions and fails unless two are answered with a source and one is refused. The
+`deploy` job in [`ci.yml`](.github/workflows/ci.yml) runs the last two after the tests and the
+Docker build pass on `main`, with a write token for the Space alone as the `HF_DEPLOY_TOKEN`
+secret. That secret isn't set yet, so the job skips its steps and the Space is deployed by hand
+with the same two commands. The Space downloads the index at startup and runs embedding and
 reranking in one ZeroGPU function, so a visitor's GPU quota pays for model time only.
 
 The models are pinned to a commit in `MODEL_REVISIONS` in `lotse.config`, and the Space preloads
@@ -393,12 +402,12 @@ Literaturhinweise are meant to be missing. Anything else is a parsing bug.
 | Refusal when the sources don't cover a question | done: score threshold before the API, then the model |
 | 100 questions: 75 answerable, 25 not | drafted by an LLM, hand review still open |
 | Evaluation: Recall@5, MRR@10, citation validity, faithfulness | measured on the dev drafts |
-| CI: lint, unit tests, Docker build, workflow lint (zizmor), actions pinned by commit | done |
-| Quality gate in CI on Recall@5 and MRR@10 | built and passing; runs in CI once the `HF_TOKEN` secret is set |
+| CI: lint, unit tests, lockfile check, Docker build, workflow lint (zizmor); actions pinned by commit, uv by version, Dependabot for the actions | done |
+| Quality gate in CI on Recall@5 and MRR@10 | done: runs on every push and passes at the baseline |
 | Gradio demo and JSON API (FastAPI) on the 11 laws | done |
 | Latency and cost logged for every query | done |
 | Docker image | builds in CI |
-| Public deployment | live on a Hugging Face Space with ZeroGPU; CI redeploys after the tests and the Docker build pass on `main`, then asks three known questions |
+| Public deployment | live on a Hugging Face Space with ZeroGPU; each deploy ends with a three-question smoke check. CI's deploy job is built and waits for the `HF_DEPLOY_TOKEN` secret, so deploys are by hand until then |
 
 ## Data sources and licensing
 
